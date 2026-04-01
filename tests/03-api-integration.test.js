@@ -6,6 +6,7 @@ import { mockFetchResponse, mockEnv, sleep } from './conftest';
 import {
   buildAPIUrl,
   queryKimiAPI,
+  queryGLMAPI,
   parseKimiResponse,
   parseGLMResponse,
   ConfigError,
@@ -138,29 +139,94 @@ describe('queryKimiAPI', () => {
 // API-02: Query GLM API usage via /api/monitor/usage/quota/limit endpoint
 // ============================================================
 describe('queryGLMAPI', () => {
-  test('should construct correct URL for GLM API', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
   });
 
-  test('should send authorization header (raw token or Bearer)', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('should construct correct URL for GLM API', async () => {
+    const mockResponse = {
+      data: {
+        limits: [{ type: 'TIME_LIMIT', used: 100, total: 1000, reset: 1743894733 }]
+      }
+    };
+
+    global.fetch = async (url, options) => {
+      expect(url).toBe('https://open.bigmodel.cn/api/monitor/usage/quota/limit');
+      return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    const result = await queryGLMAPI('https://open.bigmodel.cn', 'test-key');
+    expect(result).toEqual(mockResponse);
+  });
+
+  test('should send Bearer token in Authorization header', async () => {
+    const mockResponse = {
+      data: {
+        limits: [{ type: 'TIME_LIMIT', used: 100, total: 1000, reset: 1743894733 }]
+      }
+    };
+
+    global.fetch = async (url, options) => {
+      expect(options.headers['Authorization']).toBe('Bearer test-key-456');
+      return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    await queryGLMAPI('https://open.bigmodel.cn', 'test-key-456');
   });
 
   test('should return parsed JSON response on success', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const mockResponse = {
+      data: {
+        limits: [{ type: 'TIME_LIMIT', used: 5000, total: 10000, reset: 1743894733 }]
+      }
+    };
+
+    global.fetch = async () => mockFetchResponse(mockResponse, { status: 200 });
+
+    const result = await queryGLMAPI('https://open.bigmodel.cn', 'test-key');
+    expect(result).toEqual(mockResponse);
+    expect(result.data.limits[0].used).toBe(5000);
   });
 
   test('should throw APIError on 401 unauthorized', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    global.fetch = async () => mockFetchResponse({}, { status: 401, statusText: 'Unauthorized' });
+
+    try {
+      await queryGLMAPI('https://open.bigmodel.cn', 'invalid-key');
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(APIError);
+      expect(error.message).toContain('GLM API authentication failed');
+      expect(error.statusCode).toBe(401);
+    }
   });
 
   test('should throw APIError on 429 rate limit', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    let callCount = 0;
+    global.fetch = async () => {
+      callCount++;
+      return mockFetchResponse({}, {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: { 'retry-after': '1' }
+      });
+    };
+
+    try {
+      await queryGLMAPI('https://open.bigmodel.cn', 'test-key');
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(APIError);
+      expect(error.message).toContain('GLM API rate limit exceeded');
+      expect(error.statusCode).toBe(429);
+      expect(callCount).toBe(3);
+    }
   });
 });
 

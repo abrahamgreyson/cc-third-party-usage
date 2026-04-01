@@ -748,6 +748,61 @@ async function queryKimiAPI(baseUrl, apiKey) {
     // Re-throw other errors (NetworkError, etc.)
     throw error;
   }
+/**
+ * Query GLM API for usage data.
+ * Per D-01: Uses Bearer token authentication (same as Kimi).
+ * Per D-10/D-12: No retry on 401/403/429 errors.
+ * @param {string} baseUrl - GLM API base URL
+ * @param {string} apiKey - GLM API key
+ * @returns {Promise<object>} Raw API response (to be parsed by parseGLMResponse)
+ * @throws {APIError} On HTTP errors (401, 429, 5xx)
+ */
+async function queryGLMAPI(baseUrl, apiKey) {
+  const url = buildAPIUrl(baseUrl, 'glm');
+
+  // Per D-01: Bearer token authentication
+  try {
+    const response = await fetchWithRetry(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: DEFAULT_CONFIG.timeout,
+      maxAttempts: DEFAULT_CONFIG.maxRetries
+    });
+
+    // Parse JSON response
+    try {
+      return await response.json();
+    } catch (error) {
+      throw new APIError(
+        `Invalid JSON response from GLM API: ${error.message}`,
+        null
+      );
+    }
+  } catch (error) {
+    // Intercept APIError to provide provider-specific messages per D-10, D-12
+    if (error instanceof APIError) {
+      if (error.statusCode === 401 || error.statusCode === 403) {
+        throw new APIError(
+          `GLM API authentication failed (${error.statusCode}): Invalid API key. ` +
+          `Verify your API key is correct and has not expired.`,
+          error.statusCode
+        );
+      }
+
+      if (error.statusCode === 429) {
+        throw new APIError(
+          `GLM API rate limit exceeded. Please wait before retrying.`,
+          error.statusCode
+        );
+      }
+    }
+
+    // Re-throw other errors (NetworkError, etc.)
+    throw error;
+  }
 }
 
 ///// Response Parsers /////
@@ -923,6 +978,7 @@ export {
   detectProvider,
   buildAPIUrl,
   queryKimiAPI,
+  queryGLMAPI,
   parseKimiResponse,
   parseGLMResponse,
 };
