@@ -5,6 +5,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { mockFetchResponse, mockEnv, sleep } from './conftest';
 import {
   buildAPIUrl,
+  queryKimiAPI,
   parseKimiResponse,
   parseGLMResponse,
   ConfigError,
@@ -44,29 +45,86 @@ describe('buildAPIUrl', () => {
 // API-01: Query Kimi API usage via /coding/v1/usages endpoint
 // ============================================================
 describe('queryKimiAPI', () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   test('should construct correct URL for Kimi API', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const mockResponse = {
+      usage: [],
+      limits: [{ used: 100, total: 1000, reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    global.fetch = async (url, options) => {
+      expect(url).toBe('https://api.kimi.com/coding/v1/usages');
+      return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    const result = await queryKimiAPI('https://api.kimi.com', 'test-key');
+    expect(result).toEqual(mockResponse);
   });
 
   test('should send Bearer token in Authorization header', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const mockResponse = {
+      usage: [],
+      limits: [{ used: 100, total: 1000, reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    global.fetch = async (url, options) => {
+      expect(options.headers['Authorization']).toBe('Bearer test-key-123');
+      return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    await queryKimiAPI('https://api.kimi.com', 'test-key-123');
   });
 
   test('should return parsed JSON response on success', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const mockResponse = {
+      usage: [{ model: 'claude-3', tokens: 5000 }],
+      limits: [{ used: 5000, total: 10000, reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    global.fetch = async () => mockFetchResponse(mockResponse, { status: 200 });
+
+    const result = await queryKimiAPI('https://api.kimi.com', 'test-key');
+    expect(result).toEqual(mockResponse);
+    expect(result.limits[0].used).toBe(5000);
   });
 
   test('should throw APIError on 401 unauthorized', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    global.fetch = async () => mockFetchResponse({}, { status: 401, statusText: 'Unauthorized' });
+
+    try {
+      await queryKimiAPI('https://api.kimi.com', 'invalid-key');
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(APIError);
+      expect(error.message).toContain('Kimi API authentication failed');
+      expect(error.statusCode).toBe(401);
+    }
   });
 
   test('should throw APIError on 429 rate limit', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    global.fetch = async () => mockFetchResponse({}, {
+      status: 429,
+      statusText: 'Too Many Requests',
+      headers: { 'retry-after': '60' }
+    });
+
+    try {
+      await queryKimiAPI('https://api.kimi.com', 'test-key');
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(APIError);
+      expect(error.message).toContain('Kimi API rate limit exceeded');
+      expect(error.statusCode).toBe(429);
+    }
   });
 });
 
