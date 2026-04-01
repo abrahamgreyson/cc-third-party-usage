@@ -111,11 +111,15 @@ describe('queryKimiAPI', () => {
   });
 
   test('should throw APIError on 429 rate limit', async () => {
-    global.fetch = async () => mockFetchResponse({}, {
-      status: 429,
-      statusText: 'Too Many Requests',
-      headers: { 'retry-after': '60' }
-    });
+    let callCount = 0;
+    global.fetch = async () => {
+      callCount++;
+      return mockFetchResponse({}, {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: { 'retry-after': '1' }
+      });
+    };
 
     try {
       await queryKimiAPI('https://api.kimi.com', 'test-key');
@@ -124,6 +128,8 @@ describe('queryKimiAPI', () => {
       expect(error).toBeInstanceOf(APIError);
       expect(error.message).toContain('Kimi API rate limit exceeded');
       expect(error.statusCode).toBe(429);
+      // Verify it retried before failing (default maxAttempts is 3)
+      expect(callCount).toBe(3);
     }
   });
 });
