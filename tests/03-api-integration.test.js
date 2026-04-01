@@ -4,9 +4,41 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { mockFetchResponse, mockEnv, sleep } from './conftest';
 import {
+  buildAPIUrl,
   parseKimiResponse,
+  parseGLMResponse,
+  ConfigError,
   APIError
 } from '../usage.mjs';
+
+// ============================================================
+// API Request Infrastructure
+// ============================================================
+describe('buildAPIUrl', () => {
+  test('should construct Kimi API URL with correct path', () => {
+    const baseUrl = 'https://api.kimi.com';
+    const url = buildAPIUrl(baseUrl, 'kimi');
+    expect(url).toBe('https://api.kimi.com/coding/v1/usages');
+  });
+
+  test('should construct GLM API URL with correct path', () => {
+    const baseUrl = 'https://open.bigmodel.cn';
+    const url = buildAPIUrl(baseUrl, 'glm');
+    expect(url).toBe('https://open.bigmodel.cn/api/monitor/usage/quota/limit');
+  });
+
+  test('should handle trailing slashes in base URL', () => {
+    const baseUrl = 'https://api.kimi.com/';
+    const url = buildAPIUrl(baseUrl, 'kimi');
+    expect(url).toBe('https://api.kimi.com/coding/v1/usages');
+  });
+
+  test('should throw ConfigError for unknown provider', () => {
+    const baseUrl = 'https://api.example.com';
+    expect(() => buildAPIUrl(baseUrl, 'unknown')).toThrow(ConfigError);
+    expect(() => buildAPIUrl(baseUrl, 'unknown')).toThrow('Unknown provider');
+  });
+});
 
 // ============================================================
 // API-01: Query Kimi API usage via /coding/v1/usages endpoint
@@ -129,28 +161,66 @@ describe('parseKimiResponse', () => {
 // ============================================================
 describe('parseGLMResponse', () => {
   test('should extract used/total/reset from data.limits where type=TIME_LIMIT', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      data: {
+        limits: [
+          { type: 'OTHER_LIMIT', used: 1000, total: 5000, reset: 1743894733 },
+          { type: 'TIME_LIMIT', used: 3000, total: 10000, reset: 1743894733 }
+        ]
+      }
+    };
+
+    const result = parseGLMResponse(response);
+
+    expect(result.used).toBe(3000);
+    expect(result.total).toBe(10000);
+    expect(result.reset).toBe(1743894733);
   });
 
   test('should throw APIError when data.limits array missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = { data: {} };
+
+    expect(() => parseGLMResponse(response)).toThrow(APIError);
+    expect(() => parseGLMResponse(response)).toThrow('missing or malformed data.limits array');
   });
 
   test('should throw APIError when no TIME_LIMIT entry found', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      data: {
+        limits: [
+          { type: 'OTHER_LIMIT', used: 1000, total: 5000, reset: 1743894733 }
+        ]
+      }
+    };
+
+    expect(() => parseGLMResponse(response)).toThrow(APIError);
+    expect(() => parseGLMResponse(response)).toThrow('no TIME_LIMIT entry found');
   });
 
   test('should throw APIError when used/total fields missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      data: {
+        limits: [
+          { type: 'TIME_LIMIT', reset: 1743894733 }
+        ]
+      }
+    };
+
+    expect(() => parseGLMResponse(response)).toThrow(APIError);
+    expect(() => parseGLMResponse(response)).toThrow('used');
   });
 
   test('should throw APIError when reset field missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      data: {
+        limits: [
+          { type: 'TIME_LIMIT', used: 3000, total: 10000 }
+        ]
+      }
+    };
+
+    expect(() => parseGLMResponse(response)).toThrow(APIError);
+    expect(() => parseGLMResponse(response)).toThrow('missing reset field');
   });
 });
 

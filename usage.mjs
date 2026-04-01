@@ -659,6 +659,38 @@ function detectProvider(baseUrl) {
   );
 }
 
+///// API Integration /////
+
+/**
+ * API endpoint paths per provider.
+ * Per D-02: Hard-coded paths, no configuration needed.
+ */
+const API_ENDPOINTS = {
+  kimi: '/coding/v1/usages',
+  glm: '/api/monitor/usage/quota/limit'
+};
+
+/**
+ * Build provider-specific API URL.
+ * Per D-03: Use URL constructor for path resolution.
+ * @param {string} baseUrl - Provider base URL (e.g., 'https://api.kimi.com')
+ * @param {string} provider - Provider type ('kimi' or 'glm')
+ * @returns {string} Complete API endpoint URL
+ * @throws {ConfigError} If provider is unknown
+ */
+function buildAPIUrl(baseUrl, provider) {
+  const path = API_ENDPOINTS[provider];
+  if (!path) {
+    throw new ConfigError(
+      `Unknown provider: ${provider}. ` +
+      `This tool only supports 'kimi' and 'glm' providers.`
+    );
+  }
+
+  // Per D-03: URL constructor handles trailing slashes and path joining
+  return new URL(path, baseUrl).toString();
+}
+
 ///// Response Parsers /////
 
 /**
@@ -725,6 +757,78 @@ function parseKimiResponse(response) {
   };
 }
 
+/**
+ * Parse GLM API response and extract raw usage data.
+ * Per D-04: Independent parser for GLM-specific format.
+ * Per D-05: Direct field access to response.data.limits with TIME_LIMIT type.
+ * Per D-06: Strict validation with APIError on failure.
+ * @param {object} response - Raw API response from GLM
+ * @returns {{ used: number, total: number, reset: number }} Raw usage data (reset is Unix timestamp in seconds)
+ * @throws {APIError} If response format is invalid
+ */
+function parseGLMResponse(response) {
+  // Strict validation per D-06
+  if (!response || typeof response !== 'object') {
+    throw new APIError(
+      'Invalid GLM API response: expected JSON object. ' +
+      `Got ${response === null ? 'null' : typeof response}.`
+    );
+  }
+
+  // Per D-05: GLM wraps data in { data: { limits: [...] } }
+  if (!response.data || typeof response.data !== 'object') {
+    throw new APIError(
+      'Invalid GLM API response: missing data object. ' +
+      'Expected { data: { limits: [...] } } structure.'
+    );
+  }
+
+  if (!response.data.limits || !Array.isArray(response.data.limits)) {
+    throw new APIError(
+      'Invalid GLM API response: missing or malformed data.limits array. ' +
+      'Expected { data: { limits: [...] } } structure.'
+    );
+  }
+
+  // Per API-04: Find TIME_LIMIT entry
+  const quota = response.data.limits.find(limit => limit.type === 'TIME_LIMIT');
+  if (!quota) {
+    throw new APIError(
+      'Invalid GLM API response: no TIME_LIMIT entry found in limits array. ' +
+      'Expected at least one entry with type="TIME_LIMIT".'
+    );
+  }
+
+  // Validate required fields
+  if (typeof quota.used !== 'number') {
+    throw new APIError(
+      `Invalid GLM quota data: 'used' must be a number. ` +
+      `Got ${quota.used === undefined ? 'undefined' : typeof quota.used}.`
+    );
+  }
+
+  if (typeof quota.total !== 'number') {
+    throw new APIError(
+      `Invalid GLM quota data: 'total' must be a number. ` +
+      `Got ${quota.total === undefined ? 'undefined' : typeof quota.total}.`
+    );
+  }
+
+  if (!quota.reset) {
+    throw new APIError(
+      'Invalid GLM quota data: missing reset field. ' +
+      'Expected Unix timestamp number.'
+    );
+  }
+
+  // Return raw data for normalization
+  return {
+    used: quota.used,
+    total: quota.total,
+    reset: quota.reset // Unix timestamp per API-04
+  };
+}
+
 ///// CLI Interface /////
 ///// Entry Point /////
 
@@ -758,5 +862,7 @@ export {
   getLocalAddressPatterns,
   isProxyEnabled,
   detectProvider,
+  buildAPIUrl,
   parseKimiResponse,
+  parseGLMResponse,
 };
