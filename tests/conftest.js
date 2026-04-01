@@ -171,8 +171,21 @@ export async function createMockCCSwitchDatabase(config = {}) {
   } = config;
 
   // Load database module (handles bun:sqlite vs node:sqlite)
-  const { loadDatabaseModule } = await import('../usage.mjs');
-  const Database = await loadDatabaseModule();
+  await import('../usage.mjs').then(async (module) => {
+    await module.loadDatabaseModule();
+  });
+
+  // Import Database class based on runtime
+  const runtime = typeof process.versions.bun !== 'undefined' ? 'bun' : 'node';
+  let Database;
+
+  if (runtime === 'bun') {
+    const module = await import('bun:sqlite');
+    Database = module.Database;
+  } else {
+    const module = await import('node:sqlite');
+    Database = module.DatabaseSync;
+  }
 
   // Create in-memory database
   const db = new Database(':memory:');

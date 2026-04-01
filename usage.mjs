@@ -484,6 +484,120 @@ function expandHomePath(path) {
   return path;
 }
 
+///// Credential Extraction /////
+
+// CC Switch database path (per D-03)
+const CC_SWITCH_DB_PATH = '~/.cc-switch/cc-switch.db';
+
+/**
+ * Extracts API credentials from CC Switch SQLite database.
+ * Per D-03: Fixed database path ~/.cc-switch/cc-switch.db
+ * Per D-04: Query providers table, settings_config field, id='default'
+ * Per D-06: Fail-fast with ConfigError, no fallback to env vars
+ * @returns {Promise<{ apiKey: string, baseUrl: string }>}
+ * @throws {ConfigError} If database unreadable or credentials missing
+ */
+async function getProxyCredentials() {
+  const dbPath = expandHomePath(CC_SWITCH_DB_PATH);
+  let db;
+
+  try {
+    db = await openDatabase(dbPath);
+  } catch (error) {
+    throw new ConfigError(
+      `Failed to open CC Switch database at ${dbPath}: ${error.message}. ` +
+      'Verify CC Switch is installed and configured.'
+    );
+  }
+
+  try {
+    const result = db.prepare('SELECT settings_config FROM providers WHERE id = ?').get('default');
+
+    if (!result || !result.settings_config) {
+      throw new ConfigError(
+        'CC Switch database has no default provider configuration. ' +
+        'Verify CC Switch is properly configured.'
+      );
+    }
+
+    let config;
+    try {
+      config = JSON.parse(result.settings_config);
+    } catch (parseError) {
+      throw new ConfigError(
+        `Failed to parse CC Switch configuration: ${parseError.message}. ` +
+        'Database may be corrupted. Try reconfiguring CC Switch.'
+      );
+    }
+
+    const apiKey = config.env?.ANTHROPIC_AUTH_TOKEN;
+    const baseUrl = config.env?.ANTHROPIC_BASE_URL;
+
+    if (!apiKey) {
+      throw new ConfigError(
+        'CC Switch database missing ANTHROPIC_AUTH_TOKEN. ' +
+        'Expected env.ANTHROPIC_AUTH_TOKEN in settings_config. ' +
+        'Verify CC Switch is properly configured.'
+      );
+    }
+
+    if (!baseUrl) {
+      throw new ConfigError(
+        'CC Switch database missing ANTHROPIC_BASE_URL. ' +
+        'Expected env.ANTHROPIC_BASE_URL in settings_config. ' +
+        'Verify CC Switch is properly configured.'
+      );
+    }
+
+    return { apiKey, baseUrl };
+  } finally {
+    closeDatabase(db);
+  }
+}
+
+/**
+ * Reads API credentials from environment variables.
+ * Per D-07: Read ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN
+ * Used when no CC Switch proxy is detected.
+ * @returns {{ apiKey: string }}
+ * @throws {ConfigError} If no credentials found in environment
+ */
+function getEnvCredentials() {
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN;
+
+  if (!apiKey) {
+    throw new ConfigError(
+      'No API credentials found. ' +
+      'Set ANTHROPIC_API_KEY environment variable, ' +
+      'or configure CC Switch proxy for automatic credential detection.'
+    );
+  }
+
+  return { apiKey };
+}
+
+/**
+ * Unified credential resolution entry point.
+ * Coordinates proxy detection and credential extraction.
+ * Per D-06: No fallback to env vars when proxy detected
+ * Per D-07: Use env vars when no proxy detected
+ * @returns {Promise<{ apiKey: string, baseUrl?: string, provider: 'kimi' | 'glm' | null }>}
+ * @throws {ConfigError} If credentials cannot be obtained
+ */
+async function getCredentials() {
+  if (isProxyEnabled()) {
+    // Proxy detected - extract from database (per D-06, no fallback)
+    const { apiKey, baseUrl } = await getProxyCredentials();
+    const provider = detectProvider(baseUrl);
+    return { apiKey, baseUrl, provider };
+  } else {
+    // No proxy - use environment variables (per D-07)
+    const { apiKey } = getEnvCredentials();
+    // Provider will be detected later when making API calls
+    return { apiKey, provider: null };
+  }
+}
+
 ///// Proxy Detection /////
 
 /**
@@ -571,6 +685,10 @@ export {
   fetchWithTimeout,
   fetchWithRetry,
   expandHomePath,
+  CC_SWITCH_DB_PATH,
+  getProxyCredentials,
+  getEnvCredentials,
+  getCredentials,
   getLocalAddressPatterns,
   isProxyEnabled,
   detectProvider,
