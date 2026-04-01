@@ -805,6 +805,43 @@ async function queryGLMAPI(baseUrl, apiKey) {
   }
 }
 
+/**
+ * Unified API query entry point.
+ * Coordinates credential resolution, provider detection, and API query.
+ * @returns {Promise<{ response: object, provider: 'kimi' | 'glm' }>} Raw API response and provider type
+ * @throws {ConfigError} If credentials unavailable or provider undetectable
+ * @throws {APIError} If API request fails
+ */
+async function queryProviderAPI() {
+  // Get credentials (handles proxy detection and env vars)
+  const credentials = await getCredentials();
+  const { apiKey, baseUrl, provider } = credentials;
+
+  // Provider must be detected (either from proxy URL or needs baseUrl)
+  if (!provider) {
+    throw new ConfigError(
+      'Cannot detect provider: no baseUrl available. ' +
+      'When using environment variables without CC Switch proxy, ' +
+      'this function requires manual provider specification.'
+    );
+  }
+
+  // Query appropriate API based on provider
+  let response;
+  if (provider === 'kimi') {
+    response = await queryKimiAPI(baseUrl, apiKey);
+  } else if (provider === 'glm') {
+    response = await queryGLMAPI(baseUrl, apiKey);
+  } else {
+    throw new ConfigError(
+      `Unsupported provider: ${provider}. ` +
+      `This tool only supports 'kimi' and 'glm' providers.`
+    );
+  }
+
+  return { response, provider };
+}
+
 ///// Response Parsers /////
 
 /**

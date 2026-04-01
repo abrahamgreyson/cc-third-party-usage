@@ -7,6 +7,7 @@ import {
   buildAPIUrl,
   queryKimiAPI,
   queryGLMAPI,
+  queryProviderAPI,
   parseKimiResponse,
   parseGLMResponse,
   ConfigError,
@@ -483,18 +484,105 @@ describe('normalizeResetTime', () => {
 // Integration: Unified query flow
 // ============================================================
 describe('queryProviderAPI (integration)', () => {
-  test('should query Kimi API and return normalized data', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+  let originalFetch;
+  let restoreEnv;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    // Mock environment to test without CC Switch proxy
+    restoreEnv = mockEnv({
+      ANTHROPIC_API_KEY: 'test-env-key',
+      ANTHROPIC_BASE_URL: undefined,
+      BASE_URL: undefined
+    });
   });
 
-  test('should query GLM API and return normalized data', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+  afterEach(() => {
+    global.fetch = originalFetch;
+    restoreEnv();
+  });
+
+  test('should query Kimi API and return response with provider', async () => {
+    const mockResponse = {
+      usage: [],
+      limits: [{ used: 5000, total: 10000, reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    // Mock CC Switch proxy detection
+    const envRestore = mockEnv({
+      ANTHROPIC_BASE_URL: 'https://api.kimi.com',
+      ANTHROPIC_API_KEY: undefined // Should not be used when proxy is active
+    });
+
+    global.fetch = async (url, options) => {
+    expect(url).toContain('kimi.com');
+    expect(options.headers['Authorization']).toBe('Bearer test-proxy-key');
+    return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    // Mock getProxyCredentials to return Kimi credentials
+    const originalHome = process.env.HOME;
+    process.env.HOME = '/Users/test';
+
+    const result = await queryProviderAPI();
+
+    expect(result.response).toEqual(mockResponse);
+    expect(result.provider).toBe('kimi');
+
+    process.env.HOME = originalHome;
+    envRestore();
+  });
+
+  test('should query GLM API and return response with provider', async () => {
+    const mockResponse = {
+      data: {
+        limits: [{ type: 'TIME_LIMIT', used: 3000, total: 5000, reset: 1743894733 }]
+      }
+    };
+
+    // Mock CC Switch proxy detection for GLM
+    const envRestore = mockEnv({
+      ANTHROPIC_BASE_URL: 'https://open.bigmodel.cn/api/anthropic',
+      ANTHROPIC_API_KEY: undefined
+    });
+
+    global.fetch = async (url, options) => {
+    expect(url).toContain('bigmodel.cn');
+    expect(options.headers['Authorization']).toBe('Bearer test-proxy-key');
+    return mockFetchResponse(mockResponse, { status: 200 });
+    };
+
+    const originalHome = process.env.HOME;
+    process.env.HOME = '/Users/test';
+
+    const result = await queryProviderAPI();
+
+    expect(result.response).toEqual(mockResponse);
+    expect(result.provider).toBe('glm');
+
+    process.env.HOME = originalHome;
+    envRestore();
   });
 
   test('should use getCredentials() for authentication', async () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // This test verifies the integration with getCredentials
+    // When no proxy is detected, getCredentials returns env var credentials
+    const mockResponse = {
+      usage: [],
+      limits: [{ used: 1000, total: 5000, reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    global.fetch = async (url, options) => {
+    return mockFetchResponse(mockResponse, { status: 200 });
+    });
+
+    // No proxy, should fail because provider cannot be detected without baseUrl
+    try {
+      await queryProviderAPI();
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect(error.message).toContain('Cannot detect provider');
+    }
   });
 });
