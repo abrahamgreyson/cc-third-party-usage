@@ -573,8 +573,8 @@ describe('queryProviderAPI (integration)', () => {
     };
 
     global.fetch = async (url, options) => {
-    return mockFetchResponse(mockResponse, { status: 200 });
-    });
+      return mockFetchResponse(mockResponse, { status: 200 });
+    };
 
     // No proxy, should fail because provider cannot be detected without baseUrl
     try {

@@ -748,6 +748,8 @@ async function queryKimiAPI(baseUrl, apiKey) {
     // Re-throw other errors (NetworkError, etc.)
     throw error;
   }
+}
+
 /**
  * Query GLM API for usage data.
  * Per D-01: Uses Bearer token authentication (same as Kimi).
@@ -1016,6 +1018,7 @@ export {
   buildAPIUrl,
   queryKimiAPI,
   queryGLMAPI,
+  queryProviderAPI,
   parseKimiResponse,
   parseGLMResponse,
 };
