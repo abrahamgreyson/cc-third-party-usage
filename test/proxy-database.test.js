@@ -3,8 +3,7 @@
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { createMockCCSwitchDatabase, createTestDatabase } from '../tests/conftest.js';
-import { ConfigError } from '../usage.mjs';
-// import { getProxyCredentials, expandHomePath } from '../usage.mjs';
+import { ConfigError, expandHomePath } from '../usage.mjs';
 
 describe('getProxyCredentials', () => {
   // Tests for D-03: Database path expansion
@@ -132,20 +131,27 @@ describe('getProxyCredentials', () => {
 
 describe('expandHomePath', () => {
   // Tests for cross-platform ~ expansion
+  // Per D-03: Fixed database path ~/.cc-switch/cc-switch.db needs ~ expansion
 
-  test.skip('expands ~ to home directory', () => {
-    // const path = expandHomePath('~/.cc-switch/cc-switch.db');
-    // expect(path).toMatch(/\/\.cc-switch\/cc-switch\.db$/);
-    // expect(path).not.toContain('~');
+  test('expands ~ to home directory', () => {
+    const { homedir } = require('os');
+    const result = expandHomePath('~/.cc-switch/cc-switch.db');
+    expect(result).toBe(homedir() + '/.cc-switch/cc-switch.db');
   });
 
-  test.skip('returns unchanged path when no ~ prefix', () => {
-    // const path = expandHomePath('/absolute/path/to/file.db');
-    // expect(path).toBe('/absolute/path/to/file.db');
+  test('expands standalone ~', () => {
+    const { homedir } = require('os');
+    const result = expandHomePath('~');
+    expect(result).toBe(homedir());
   });
 
-  test.skip('handles paths without leading ~', () => {
-    // const path = expandHomePath('relative/path.txt');
-    // expect(path).toBe('relative/path.txt');
+  test('returns path unchanged if no ~ prefix', () => {
+    const path = '/absolute/path/to/file.db';
+    expect(expandHomePath(path)).toBe(path);
+  });
+
+  test('does not expand ~ in middle of path', () => {
+    const path = '/path/~user/file.db';
+    expect(expandHomePath(path)).toBe(path);
   });
 });

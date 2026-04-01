@@ -463,6 +463,27 @@ async function fetchWithRetry(url, options = {}) {
 }
 ///// Service Layer /////
 
+///// Path Utilities /////
+
+import { homedir } from 'os';
+
+/**
+ * Expands ~ in path to user's home directory.
+ * Cross-platform compatible (macOS, Linux, Windows).
+ * Per D-03: Fixed database path ~/.cc-switch/cc-switch.db needs ~ expansion.
+ * @param {string} path - Path that may contain ~
+ * @returns {string} Path with ~ expanded
+ */
+function expandHomePath(path) {
+  if (path.startsWith('~/')) {
+    return homedir() + path.slice(1);
+  }
+  if (path === '~') {
+    return homedir();
+  }
+  return path;
+}
+
 ///// Proxy Detection /////
 
 /**
@@ -549,6 +570,7 @@ export {
   isRetryableError,
   fetchWithTimeout,
   fetchWithRetry,
+  expandHomePath,
   getLocalAddressPatterns,
   isProxyEnabled,
   detectProvider,
