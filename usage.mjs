@@ -488,6 +488,42 @@ function isProxyEnabled() {
   return localPatterns.some(pattern => baseUrl.includes(pattern));
 }
 
+///// Provider Detection /////
+
+/**
+ * Detects provider type based on baseUrl domain.
+ * Per D-05: kimi.com → Kimi, bigmodel.cn → GLM, others → ConfigError
+ * @param {string} baseUrl - The API base URL
+ * @returns {'kimi' | 'glm'} Provider type
+ * @throws {ConfigError} If provider is not supported
+ */
+function detectProvider(baseUrl) {
+  let hostname;
+  try {
+    const url = new URL(baseUrl);
+    hostname = url.hostname;
+  } catch (error) {
+    throw new ConfigError(
+      `Invalid API base URL: ${baseUrl}. ` +
+      'URL must be a valid HTTP/HTTPS endpoint.'
+    );
+  }
+
+  // Per D-05: Domain-based provider detection
+  // Note: Only support Kimi and GLM (Mainland China), not ZAI (overseas)
+  if (hostname.includes('kimi.com')) {
+    return 'kimi';
+  }
+  if (hostname.includes('bigmodel.cn')) {
+    return 'glm';
+  }
+
+  throw new ConfigError(
+    `Unsupported API provider: ${hostname}. ` +
+    'This tool only supports Kimi (kimi.com) and GLM (bigmodel.cn) providers.'
+  );
+}
+
 ///// CLI Interface /////
 ///// Entry Point /////
 
@@ -515,4 +551,5 @@ export {
   fetchWithRetry,
   getLocalAddressPatterns,
   isProxyEnabled,
+  detectProvider,
 };
