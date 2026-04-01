@@ -73,7 +73,7 @@ plans:
 
 **Plans:** 4 plans in 3 waves
 plans:
-- [ ] 03-00-PLAN.md — Wave 0: test infrastructure (test stubs for mock API fixtures)
+- [x] 03-00-PLAN.md — Wave 0: test infrastructure (test stubs for mock API fixtures)
 - [ ] 03-01-PLAN.md — Wave 1: API request infrastructure (URL builder, query functions)
 - [ ] 03-02-PLAN.md — Wave 1: Response parsers (Kimi parser, GLM parser)
 - [ ] 03-03-PLAN.md — Wave 2: Data normalization (timestamp conversion, percentage, unified format)

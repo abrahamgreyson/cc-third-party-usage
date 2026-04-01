@@ -14,11 +14,11 @@
 
 ### API Integration
 
-- [ ] **API-01**: Query Kimi API usage via `/v1/usages` endpoint
-- [ ] **API-02**: Query GLM API usage via `/api/monitor/usage/quota/limit` endpoint
-- [ ] **API-03**: Parse Kimi response format: `{ usage: [...], limits: [...] }` with duration=300 for 5-minute windows
-- [ ] **API-04**: Parse GLM response format: `{ data: { limits: [...] } }` with `TIME_LIMIT` type entries
-- [ ] **API-05**: Handle API errors with clear error messages (no silent fallback)
+- [x] **API-01**: Query Kimi API usage via `/v1/usages` endpoint
+- [x] **API-02**: Query GLM API usage via `/api/monitor/usage/quota/limit` endpoint
+- [x] **API-03**: Parse Kimi response format: `{ usage: [...], limits: [...] }` with duration=300 for 5-minute windows
+- [x] **API-04**: Parse GLM response format: `{ data: { limits: [...] } }` with `TIME_LIMIT` type entries
+- [x] **API-05**: Handle API errors with clear error messages (no silent fallback)
 
 ### Proxy Penetration (CC Switch)
 
@@ -36,10 +36,10 @@
 
 ### Data Normalization
 
-- [ ] **NORM-01**: Normalize usage data to standard format: `{ total, used, remaining, percent, reset_display }`
-- [ ] **NORM-02**: Calculate percentage: `(used / total) * 100`
-- [ ] **NORM-03**: Convert reset time to human-readable format ("X小时X分" or similar)
-- [ ] **NORM-04**: Handle both timestamp (GLM) and ISO string (Kimi) reset time formats
+- [x] **NORM-01**: Normalize usage data to standard format: `{ total, used, remaining, percent, reset_display }`
+- [x] **NORM-02**: Calculate percentage: `(used / total) * 100`
+- [x] **NORM-03**: Convert reset time to human-readable format ("X小时X分" or similar)
+- [x] **NORM-04**: Handle both timestamp (GLM) and ISO string (Kimi) reset time formats
 
 ### Caching
 
@@ -143,15 +143,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROV-01 | Phase 2 | Complete |
 | PROV-02 | Phase 2 | Complete |
 | PROV-03 | Phase 2 | Complete |
-| API-01 | Phase 3 | Pending |
-| API-02 | Phase 3 | Pending |
-| API-03 | Phase 3 | Pending |
-| API-04 | Phase 3 | Pending |
-| API-05 | Phase 3 | Pending |
-| NORM-01 | Phase 3 | Pending |
-| NORM-02 | Phase 3 | Pending |
-| NORM-03 | Phase 3 | Pending |
-| NORM-04 | Phase 3 | Pending |
+| API-01 | Phase 3 | Complete |
+| API-02 | Phase 3 | Complete |
+| API-03 | Phase 3 | Complete |
+| API-04 | Phase 3 | Complete |
+| API-05 | Phase 3 | Complete |
+| NORM-01 | Phase 3 | Complete |
+| NORM-02 | Phase 3 | Complete |
+| NORM-03 | Phase 3 | Complete |
+| NORM-04 | Phase 3 | Complete |
 | CACHE-01 | Phase 4 | Pending |
 | CACHE-02 | Phase 4 | Pending |
 | CACHE-03 | Phase 4 | Pending |
