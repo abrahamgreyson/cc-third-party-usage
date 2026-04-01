@@ -3,6 +3,10 @@
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { mockFetchResponse, mockEnv, sleep } from './conftest';
+import {
+  parseKimiResponse,
+  APIError
+} from '../usage.mjs';
 
 // ============================================================
 // API-01: Query Kimi API usage via /coding/v1/usages endpoint
@@ -69,28 +73,54 @@ describe('queryGLMAPI', () => {
 // ============================================================
 describe('parseKimiResponse', () => {
   test('should extract used/total/reset from limits[0]', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      usage: [],
+      limits: [{
+        used: 5000,
+        total: 10000,
+        reset: '2026-04-06T03:33:46.648544Z'
+      }]
+    };
+
+    const result = parseKimiResponse(response);
+
+    expect(result.used).toBe(5000);
+    expect(result.total).toBe(10000);
+    expect(result.reset).toBe('2026-04-06T03:33:46.648544Z');
   });
 
   test('should throw APIError when limits array missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = { usage: [] };
+
+    expect(() => parseKimiResponse(response)).toThrow(APIError);
+    expect(() => parseKimiResponse(response)).toThrow('missing or malformed limits array');
   });
 
   test('should throw APIError when limits array empty', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = { usage: [], limits: [] };
+
+    expect(() => parseKimiResponse(response)).toThrow(APIError);
+    expect(() => parseKimiResponse(response)).toThrow('limits array is empty');
   });
 
   test('should throw APIError when used/total fields missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      usage: [],
+      limits: [{ reset: '2026-04-06T03:33:46.648544Z' }]
+    };
+
+    expect(() => parseKimiResponse(response)).toThrow(APIError);
+    expect(() => parseKimiResponse(response)).toThrow('used');
   });
 
   test('should throw APIError when reset field missing', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    const response = {
+      usage: [],
+      limits: [{ used: 5000, total: 10000 }]
+    };
+
+    expect(() => parseKimiResponse(response)).toThrow(APIError);
+    expect(() => parseKimiResponse(response)).toThrow('missing reset field');
   });
 });
 

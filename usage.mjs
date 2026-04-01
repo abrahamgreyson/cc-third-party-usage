@@ -659,6 +659,72 @@ function detectProvider(baseUrl) {
   );
 }
 
+///// Response Parsers /////
+
+/**
+ * Parse Kimi API response and extract raw usage data.
+ * Per D-04: Independent parser for Kimi-specific format.
+ * Per D-05: Direct field access to response.limits[0].
+ * Per D-06: Strict validation with APIError on failure.
+ * @param {object} response - Raw API response from Kimi
+ * @returns {{ used: number, total: number, reset: string }} Raw usage data (reset is ISO string)
+ * @throws {APIError} If response format is invalid
+ */
+function parseKimiResponse(response) {
+  // Strict validation per D-06
+  if (!response || typeof response !== 'object') {
+    throw new APIError(
+      'Invalid Kimi API response: expected JSON object. ' +
+      `Got ${response === null ? 'null' : typeof response}.`
+    );
+  }
+
+  // Per D-05: Kimi uses response.limits[0]
+  if (!response.limits || !Array.isArray(response.limits)) {
+    throw new APIError(
+      'Invalid Kimi API response: missing or malformed limits array. ' +
+      'Expected { usage: [...], limits: [...] } structure.'
+    );
+  }
+
+  const quota = response.limits[0];
+  if (!quota) {
+    throw new APIError(
+      'Invalid Kimi API response: limits array is empty. ' +
+      'Expected at least one quota entry.'
+    );
+  }
+
+  // Validate required fields
+  if (typeof quota.used !== 'number') {
+    throw new APIError(
+      `Invalid Kimi quota data: 'used' must be a number. ` +
+      `Got ${quota.used === undefined ? 'undefined' : typeof quota.used}.`
+    );
+  }
+
+  if (typeof quota.total !== 'number') {
+    throw new APIError(
+      `Invalid Kimi quota data: 'total' must be a number. ` +
+      `Got ${quota.total === undefined ? 'undefined' : typeof quota.total}.`
+    );
+  }
+
+  if (!quota.reset) {
+    throw new APIError(
+      'Invalid Kimi quota data: missing reset field. ' +
+      'Expected ISO 8601 timestamp string.'
+    );
+  }
+
+  // Return raw data for normalization
+  return {
+    used: quota.used,
+    total: quota.total,
+    reset: quota.reset // ISO string format per API-03
+  };
+}
+
 ///// CLI Interface /////
 ///// Entry Point /////
 
@@ -692,4 +758,5 @@ export {
   getLocalAddressPatterns,
   isProxyEnabled,
   detectProvider,
+  parseKimiResponse,
 };
