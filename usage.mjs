@@ -1336,6 +1336,21 @@ function buildPlaceholderValues(data) {
     values[`${prefix}_remaining`] = quota.remaining ?? '';
   }
 
+  // Shortest reset window for bare placeholders (OUT-04)
+  const sortedQuotas = [...data.quotas].sort((a, b) => {
+    const aTime = a.reset_timestamp ?? Infinity;
+    const bTime = b.reset_timestamp ?? Infinity;
+    return aTime - bTime;
+  });
+  const defaultQuota = sortedQuotas[0] || data.quotas[0];
+  if (defaultQuota) {
+    values.total = defaultQuota.total ?? '';
+    values.used = defaultQuota.used ?? '';
+    values.remaining = defaultQuota.remaining ?? '';
+    values.percent = defaultQuota.percent ?? '';
+    values.reset = defaultQuota.reset_display ?? '';
+  }
+
   return values;
 }
 
