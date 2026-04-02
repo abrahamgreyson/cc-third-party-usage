@@ -865,6 +865,27 @@ function formatTimeRemaining(ms) {
 }
 
 /**
+ * Format remaining milliseconds as compact time string for statusLine.
+ * Per OUT-02: Compact format like "2h30m", "45m15s", "3d12h".
+ * Skips seconds when days are shown (per RESEARCH.md Pattern 4).
+ * @param {number} ms - Time in milliseconds
+ * @returns {string} Compact time string (e.g., "2h30m", "0s")
+ */
+function formatCompactTime(ms) {
+  if (ms <= 0) return '0s';
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 && days === 0) parts.push(`${seconds}s`);
+  return parts.join('');
+}
+
+/**
  * Normalize reset time to human-readable format.
  * Per D-07: Detect format, validate, calculate remaining time.
  * Per NORM-03: Return "X小时X分钟" format.
@@ -878,8 +899,8 @@ function normalizeResetTime(resetTime) {
 
   // Per NORM-04: Detect format
   if (typeof resetTime === 'number') {
-    // Unix timestamp in seconds (GLM) - must multiply by 1000 for JS Date
-    resetDate = new Date(resetTime * 1000);
+    // Heuristic: >1e12 is already milliseconds (GLM 13-digit), <1e12 is seconds (legacy)
+    resetDate = new Date(resetTime > 1e12 ? resetTime : resetTime * 1000);
   } else if (typeof resetTime === 'string') {
     // ISO string (Kimi)
     resetDate = new Date(resetTime);
@@ -1275,6 +1296,7 @@ export {
   parseKimiResponse,
   parseGLMResponse,
   formatTimeRemaining,
+  formatCompactTime,
   normalizeResetTime,
   calculatePercentage,
   normalizeUsageData,
