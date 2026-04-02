@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { Command } from 'commander';
+
 ///// Metadata /////
 
 const VERSION = '1.0.0';
@@ -1312,7 +1314,153 @@ async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, 
 }
 
 ///// CLI Interface /////
+
+/**
+ * Build flat placeholder values from nested data structure.
+ * Per D-06, D-07: Window-prefixed keys for template substitution.
+ * Provider name is capitalized (per D-03: "Kimi" not "kimi").
+ * @param {{ provider: string, quotas: Array }} data - Normalized usage data
+ * @returns {Object} Flat key-value lookup for template substitution
+ */
+function buildPlaceholderValues(data) {
+  const values = {
+    provider: data.provider.charAt(0).toUpperCase() + data.provider.slice(1)
+  };
+
+  for (const quota of data.quotas) {
+    const prefix = quota.window;
+    values[`${prefix}_percent`] = quota.percent ?? '';
+    values[`${prefix}_reset`] = quota.reset_display ?? '';
+    values[`${prefix}_used`] = quota.used ?? '';
+    values[`${prefix}_total`] = quota.total ?? '';
+    values[`${prefix}_remaining`] = quota.remaining ?? '';
+  }
+
+  return values;
+}
+
+/**
+ * Apply template substitution using {key} placeholder syntax.
+ * Per D-06: Known placeholders replaced, unknown kept as-is.
+ * @param {string} template - Template string with {key} placeholders
+ * @param {{ provider: string, quotas: Array }} data - Normalized usage data
+ * @returns {string} Template with placeholders substituted
+ */
+function applyTemplate(template, data) {
+  const values = buildPlaceholderValues(data);
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    return key in values ? String(values[key]) : match;
+  });
+}
+
+/**
+ * Format default output for statusLine display.
+ * Per D-03: "Provider: X% | YhZm" format with uppercase provider.
+ * Per D-05: Selects quota with shortest remaining reset time.
+ * Per OUT-02: Uses formatCompactTime for compact reset display.
+ * @param {{ provider: string, quotas: Array }} data - Normalized usage data
+ * @returns {string} Formatted statusLine string
+ */
+function formatDefaultOutput(data) {
+  // D-05: Select quota with shortest reset time (most urgent)
+  const sortedQuotas = [...data.quotas].sort((a, b) => {
+    const aTime = a.reset_timestamp ?? Infinity;
+    const bTime = b.reset_timestamp ?? Infinity;
+    return aTime - bTime;
+  });
+  const quota = sortedQuotas[0] || data.quotas[0];
+  if (!quota) return `${data.provider}: no quota data`;
+
+  const providerName = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+  let compactReset;
+  if (quota.reset_timestamp && quota.reset_timestamp > 0) {
+    const remainingMs = quota.reset_timestamp - Date.now();
+    compactReset = formatCompactTime(remainingMs);
+  } else {
+    compactReset = quota.reset_display || 'unknown';
+  }
+
+  return `${providerName}: ${quota.percent}% | ${compactReset}`;
+}
+
+/**
+ * Write a debug-prefixed message to stderr.
+ * Per D-09: All verbose output prefixed with [debug].
+ * @param {string} message - Message to write
+ */
+function verboseLog(message) {
+  process.stderr.write(`[debug] ${message}\n`);
+}
+
+/**
+ * Output verbose diagnostic information to stderr.
+ * Per D-09, D-10: Cache status, provider source, API call details.
+ * @param {{ cacheStatus: string, cachePath: string, cacheTtlRemaining: number|null, apiDuration: number|null, apiRetries: number|null, apiUrl: string|null, providerSource: string }} diagnostics - Diagnostic metadata from getCachedUsageData
+ */
+function outputVerboseInfo(diagnostics) {
+  const d = diagnostics;
+  verboseLog(`Cache: ${d.cacheStatus}${d.cacheTtlRemaining !== null ? ` (${d.cacheTtlRemaining}s remaining)` : ` (${d.cachePath})`}`);
+  verboseLog(`Provider: ${d.providerSource}`);
+  if (d.apiDuration !== null) {
+    verboseLog(`API call: ${d.apiDuration}ms, ${d.apiRetries} retries, ${d.apiUrl}`);
+  }
+}
+
+/**
+ * Main CLI entry point using Commander.js.
+ * Per D-11: --json, --template, --verbose, --cache-duration, --version flags.
+ * Per D-12: Dual-mode -- CLI when run directly, module when imported.
+ * Per D-13: Data to stdout, errors/debug to stderr.
+ * Per D-14: ExitOverride for testability.
+ * @returns {Promise<void>}
+ */
+async function runCLI() {
+  const program = new Command();
+  program
+    .name('usage.mjs')
+    .description(DESCRIPTION)
+    .version(`usage.mjs v${VERSION}`, '-v, --version', 'output the current version')
+    .option('-j, --json', 'output raw JSON')
+    .option('-t, --template <string>', 'custom output template')
+    .option('--verbose', 'show debug information')
+    .option('-c, --cache-duration <seconds>', 'cache TTL in seconds', parseInt, DEFAULT_CONFIG.cacheDuration)
+    .exitOverride()
+    .action(async (options) => {
+      const { data, diagnostics } = await getCachedUsageData(options.cacheDuration);
+
+      if (options.verbose) {
+        outputVerboseInfo(diagnostics);
+      }
+
+      if (options.json) {
+        process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+      } else if (options.template) {
+        process.stdout.write(applyTemplate(options.template, data) + '\n');
+      } else {
+        process.stdout.write(formatDefaultOutput(data) + '\n');
+      }
+    });
+
+  await program.parseAsync(process.argv);
+}
+
 ///// Entry Point /////
+
+// Per D-12: Dual-mode -- CLI when run directly, module when imported
+const isMainModule = process.argv[1] &&
+  (process.argv[1].includes('usage.mjs') || process.argv[1].includes('usage'));
+
+if (isMainModule) {
+  runCLI().catch(error => {
+    // Commander.js throws on --help and --version due to exitOverride()
+    // These are normal exits, not errors -- check for CommanderError
+    if (error && error.code === 'commander.version' || error?.code === 'commander.help' ||
+        error?.code === 'commander.helpDisplayed') {
+      process.exit(0);
+    }
+    handleError(error);
+  });
+}
 
 export {
   VERSION,
@@ -1360,4 +1508,10 @@ export {
   readCache,
   writeCache,
   getCachedUsageData,
+  buildPlaceholderValues,
+  applyTemplate,
+  formatDefaultOutput,
+  verboseLog,
+  outputVerboseInfo,
+  runCLI,
 };
