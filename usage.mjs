@@ -844,6 +844,69 @@ async function queryProviderAPI() {
   return { response, provider };
 }
 
+///// Data Normalization /////
+
+/**
+ * Format remaining milliseconds as human-readable time string.
+ * Per D-07: Format as "X小时X分钟" or "X分钟" (Chinese format).
+ * @param {number} ms - Remaining time in milliseconds
+ * @returns {string} Human-readable time string
+ */
+function formatTimeRemaining(ms) {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `${hours}小时${minutes}分钟`;
+  }
+  return `${minutes}分钟`;
+}
+
+/**
+ * Normalize reset time to human-readable format.
+ * Per D-07: Detect format, validate, calculate remaining time.
+ * Per NORM-03: Return "X小时X分钟" format.
+ * Per NORM-04: Handle both Unix timestamp (GLM) and ISO string (Kimi).
+ * @param {string|number} resetTime - Reset time (ISO string or Unix timestamp in seconds)
+ * @returns {string} Human-readable remaining time (e.g., "2小时30分钟")
+ * @throws {APIError} If reset time format is invalid
+ */
+function normalizeResetTime(resetTime) {
+  let resetDate;
+
+  // Per NORM-04: Detect format
+  if (typeof resetTime === 'number') {
+    // Unix timestamp in seconds (GLM) - must multiply by 1000 for JS Date
+    resetDate = new Date(resetTime * 1000);
+  } else if (typeof resetTime === 'string') {
+    // ISO string (Kimi)
+    resetDate = new Date(resetTime);
+  } else {
+    throw new APIError(
+      `Invalid reset time format: expected number or string, got ${typeof resetTime}.`
+    );
+  }
+
+  // Validate date is parseable
+  if (isNaN(resetDate.getTime())) {
+    throw new APIError(
+      `Invalid reset time value: "${resetTime}" cannot be converted to valid date.`
+    );
+  }
+
+  // Calculate remaining time
+  const now = new Date();
+  const remainingMs = resetDate - now;
+
+  // Handle edge case: already expired
+  if (remainingMs <= 0) {
+    return '已过期';
+  }
+
+  // Format as human-readable per D-07
+  return formatTimeRemaining(remainingMs);
+}
+
 ///// Response Parsers /////
 
 /**
@@ -1021,4 +1084,6 @@ export {
   queryProviderAPI,
   parseKimiResponse,
   parseGLMResponse,
+  formatTimeRemaining,
+  normalizeResetTime,
 };

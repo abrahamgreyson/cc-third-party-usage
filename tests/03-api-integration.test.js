@@ -10,6 +10,8 @@ import {
   queryProviderAPI,
   parseKimiResponse,
   parseGLMResponse,
+  formatTimeRemaining,
+  normalizeResetTime,
   ConfigError,
   APIError
 } from '../usage.mjs';
@@ -430,23 +432,27 @@ describe('calculatePercentage', () => {
 // ============================================================
 describe('formatTimeRemaining', () => {
   test('should format hours and minutes in Chinese', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // 2 hours 30 minutes = 2 * 60 * 60 * 1000 + 30 * 60 * 1000 = 9000000 ms
+    const result = formatTimeRemaining(9000000);
+    expect(result).toBe('2小时30分钟');
   });
 
   test('should show only minutes when < 1 hour', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // 45 minutes = 45 * 60 * 1000 = 2700000 ms
+    const result = formatTimeRemaining(2700000);
+    expect(result).toBe('45分钟');
   });
 
   test('should return "已过期" when time already passed', () => {
-    // TODO: Implement test
+    // This test is for normalizeResetTime, not formatTimeRemaining
+    // formatTimeRemaining just formats milliseconds, it doesn't know about expiration
     expect(true).toBe(true);
   });
 
   test('should handle 0 remaining time', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // 0 ms should format as "0分钟"
+    const result = formatTimeRemaining(0);
+    expect(result).toBe('0分钟');
   });
 });
 
@@ -455,28 +461,56 @@ describe('formatTimeRemaining', () => {
 // ============================================================
 describe('normalizeResetTime', () => {
   test('should parse ISO string format (Kimi)', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // Create a date 2 hours in the future
+    const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const isoString = futureDate.toISOString();
+
+    const result = normalizeResetTime(isoString);
+
+    // Should contain hours and minutes
+    expect(result).toMatch(/\d+小时\d+分钟/);
   });
 
   test('should parse Unix timestamp in seconds (GLM)', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // Create a date 1 hour in the future
+    const futureDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
+    const unixTimestamp = Math.floor(futureDate.getTime() / 1000);
+
+    const result = normalizeResetTime(unixTimestamp);
+
+    // Should contain minutes (may or may not have hours depending on exact timing)
+    expect(result).toMatch(/\d+分钟/);
   });
 
   test('should multiply Unix timestamp by 1000 for Date', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    // Create a date 90 minutes in the future
+    const futureDate = new Date(Date.now() + 90 * 60 * 1000);
+    const unixTimestamp = Math.floor(futureDate.getTime() / 1000);
+
+    const result = normalizeResetTime(unixTimestamp);
+
+    // Should be around 1 hour 30 minutes (allow for some variance in timing)
+    expect(result).toMatch(/1小时(29|30)分钟/);
   });
 
   test('should throw APIError for invalid date string', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    expect(() => normalizeResetTime('invalid-date')).toThrow(APIError);
+    expect(() => normalizeResetTime('invalid-date')).toThrow('cannot be converted to valid date');
   });
 
   test('should throw APIError for non-number/string input', () => {
-    // TODO: Implement test
-    expect(true).toBe(true);
+    expect(() => normalizeResetTime({})).toThrow(APIError);
+    expect(() => normalizeResetTime({})).toThrow('expected number or string');
+  });
+
+  test('should return "已过期" when time already passed', () => {
+    // Create a date 1 hour in the past
+    const pastDate = new Date(Date.now() - 1 * 60 * 60 * 1000);
+    const isoString = pastDate.toISOString();
+
+    const result = normalizeResetTime(isoString);
+
+    expect(result).toBe('已过期');
   });
 });
 
