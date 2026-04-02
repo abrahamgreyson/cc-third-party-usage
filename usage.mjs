@@ -4,7 +4,7 @@ import { Command } from 'commander';
 
 ///// Metadata /////
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.3';
 const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
 
 ///// Constants & Configuration /////
@@ -19,7 +19,7 @@ const EXIT_CODES = {
 
 const DEFAULT_CONFIG = {
   cacheDuration: 60,
-  timeout: 5000,
+  timeout: 20000,
   maxRetries: 3,
   initialRetryDelay: 1000,
   maxRetryDelay: 10000,
