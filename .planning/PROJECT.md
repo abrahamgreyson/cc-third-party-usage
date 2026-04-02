@@ -8,26 +8,128 @@ A high-performance single-file CLI tool (`usage.mjs`) that queries Kimi and GLM 
 
 Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero-configuration auto-detection and cache-optimized for frequent status bar refreshes.
 
+## Current State
+
+**Version:** v1.0.0 (Shipped 2026-04-02)
+**Status:** Production Ready
+**Runtime Support:** Bun 1.3.10+, Node.js 22.5.0+
+
+### Shipped Features
+
+✅ **Cross-Runtime Foundation**
+- Single-file ESM architecture (usage.mjs)
+- Zero external dependencies (except Commander.js 14.0.3)
+- Runtime detection and conditional SQLite imports
+- Fail-fast error handling with semantic exit codes
+
+✅ **CC Switch Proxy Auto-Penetration**
+- Automatic credential extraction from `~/.cc-switch/cc-switch.db`
+- Provider auto-detection (Kimi, GLM)
+- Environment variable fallback for non-proxy users
+
+✅ **Unified API Integration**
+- Kimi API usage query via `/coding/v1/usages`
+- GLM API usage query via `/api/monitor/usage/quota/limit`
+- Multi-window quota parsing
+- Human-readable time formatting ("2小时30分钟")
+
+✅ **Intelligent Caching**
+- 60-second TTL (configurable)
+- Atomic write-then-rename pattern
+- System temp directory location
+- Fail-open strategy
+
+✅ **Flexible CLI Interface**
+- Default concise output optimized for statusLine
+- JSON output via `--json`
+- Custom templates via `--template`
+- Debugging via `--verbose`
+- Help and version flags
+
+### Test Coverage
+
+**226 tests passing** across all 5 phases:
+- Phase 1: 67 tests (runtime, database, HTTP)
+- Phase 2: 44 tests (proxy, provider, credentials)
+- Phase 3: 46 tests (API, normalization)
+- Phase 4: 23 tests (caching)
+- Phase 5: 46 tests (CLI, output)
+
+### Installation
+
+```bash
+# Clone repository
+git clone <repo-url>
+cd cc-third-party-usage
+
+# Run with Bun (recommended)
+bun run usage.mjs
+
+# Run with Node.js
+node usage.mjs
+
+# Build standalone executable (Bun only)
+bun build usage.mjs --compile --outfile cc-usage
+```
+
+### Usage
+
+```bash
+# Default output (statusLine-optimized)
+bun usage.mjs
+# Output: Kimi: 45.2% | 2h30m
+
+# JSON output
+bun usage.mjs --json
+
+# Custom template
+bun usage.mjs --template '{provider}: {used}/{total} ({percent}%)'
+
+# Verbose mode
+bun usage.mjs --verbose
+
+# Custom cache duration
+bun usage.mjs --cache-duration 120
+```
+
+## Next Milestone Goals
+
+**v1.1 - Enhanced Usability** (Planned)
+
+Potential enhancements:
+- Additional provider support (beyond Kimi/GLM)
+- Configuration file support (YAML/JSON)
+- Usage history export (CSV/JSON)
+- Watch mode for continuous monitoring
+- Multiple output format presets
+
 ## Requirements
 
 ### Validated
 
-- [x] Implement 60-second cache (configurable) at `~/.cc-switch/usage_cache.json` — Validated in Phase 4: Caching Layer
-- [x] Default concise output format optimized for statusLine — Validated in Phase 5: CLI Interface & Output Formatting
-- [x] Support `--template` flag for custom output format with bare and window-prefixed placeholders — Validated in Phase 5: CLI Interface & Output Formatting
-- [x] Full CLI with `--json`, `--verbose`, `--cache-duration`, `--help`, `--version` flags — Validated in Phase 5: CLI Interface & Output Formatting
+All v1.0 requirements have been validated and archived:
+- ✅ 47/47 requirements satisfied
+- ✅ 226 automated tests passing
+- ✅ Cross-runtime compatibility verified
+- ✅ Production deployment tested
 
-### Active
-
-(All requirements validated — project complete for v1.0)
+See [v1.0 Requirements Archive](milestones/v1.0-REQUIREMENTS.md) for complete details.
 
 ### Out of Scope
 
-- **Real-time WebSocket monitoring** — polling-based approach sufficient for statusLine refresh patterns
-- **OAuth authentication flows** — API key-based auth only
-- **Multiple provider aggregation** — single provider per invocation
-- **Persistent database storage** — lightweight JSON cache only
-- **Windows CC Switch paths** — assume Unix-like paths (`~/.cc-switch/`)
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Real-time WebSocket monitoring | Polling-based approach sufficient for statusLine refresh patterns |
+| OAuth authentication flows | API key-based auth only; OAuth violates single-file constraint |
+| Multiple provider aggregation | Single provider per invocation; different quota systems |
+| Persistent database storage | Lightweight JSON cache only |
+| Windows CC Switch paths | Unix-only (macOS/Linux) |
+| Built-in alerting/threshold notifications | External monitoring tools can parse JSON output |
+| Rate limit enforcement | Tool's job is monitoring, not throttling |
+| Web dashboard/UI | Violates single-file CLI constraint |
+| Graceful degradation | Fail-fast principle: users must see real errors |
 
 ## Context
 
@@ -55,7 +157,7 @@ Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero
 - **Single File:** Must be implemented as `usage.mjs` (ESM format) — no multi-file architectures
 - **Runtime Compatibility:** Must work identically on Bun and Node.js without transpilation
 - **Performance:** StatusLine invocations must complete within 2 seconds (cache helps)
-- **SQLite Access:** Use Bun's built-in `bun:sqlite` or Node's `node:sqlite` (no external dependencies)
+- **SQLite Access:** Use Bun's `bun:sqlite` or Node's `node:sqlite` (no external dependencies)
 - **Error Handling:** Failed CC Switch penetration must exit with error (no silent fallback)
 - **Cache Duration:** Default 60 seconds, user-configurable via CLI flag
 
@@ -63,28 +165,25 @@ Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Single-file architecture | Simplicity for statusLine integration, easy distribution | — Pending |
-| 60-second default cache | Balance between freshness and API rate limit conservation | — Pending |
-| Auto-detect provider | Zero-configuration UX, domain-based detection is reliable | — Pending |
-| Error on penetration failure | Fail-fast principle: user should know config is broken | — Pending |
-| Template engine over multiple formats | Flexibility without bloat, statusLine needs simple strings | — Pending |
+| Single-file architecture | Simplicity for statusLine integration, easy distribution | ✅ Shipped - usage.mjs is 5,402 LOC |
+| 60-second default cache | Balance between freshness and API rate limit conservation | ✅ Shipped - configurable via --cache-duration |
+| Auto-detect provider | Zero-configuration UX, domain-based detection is reliable | ✅ Shipped - detectProvider() for kimi.com, bigmodel.cn |
+| Error on penetration failure | Fail-fast principle: user should know config is broken | ✅ Shipped - ConfigError with exit code 2 |
+| Template engine over multiple formats | Flexibility without bloat, statusLine needs simple strings | ✅ Shipped - --template with bare + window-prefixed placeholders |
 
 ## Evolution
 
+**v1.0 → v1.1 Preparation:**
+
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd:transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd:complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
+**After v1.0 milestone completion (2026-04-02):**
+1. ✅ All v1.0 requirements moved to Validated section
+2. ✅ Current State section updated with shipped version
+3. ✅ Next Milestone Goals section added
+4. ✅ Out of Scope reasoning audited and confirmed
+5. ✅ Context updated with current state
 
 ---
-*Last updated: 2026-04-02 after Phase 5 completion — milestone v1.0 complete*
+
+*Last updated: 2026-04-02 after v1.0 milestone completion*
