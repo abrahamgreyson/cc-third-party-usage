@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-02T06:21:04.453Z"
+status: verifying
+last_updated: "2026-04-02T06:41:06.575Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 16
-  completed_plans: 15
-  percent: 94
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State: cc-third-party-usage
 
 **Last Updated:** 2026-04-02
 **Phase:** 5
-**Status:** Executing Phase 05 - Plan 01 complete
+**Status:** Phase complete — ready for verification
 
 ## Project Reference
 
@@ -35,12 +35,12 @@ progress:
 
 Phase: 05 (cli-interface-output-formatting) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 **Phase:** 1 - Core Infrastructure
 **Status:** ✅ COMPLETED - All 4 waves finished
 **Progress:**
 
-[█████████░] 94%
+[██████████] 100%
 [████████████████████] 100% - Core Infrastructure Complete
 
 ```
@@ -98,6 +98,7 @@ Status: Ready to execute
 | Phase 04 P01 | 6min | 1 tasks | 2 files |
 | Phase 05 P00 | 2min | 1 tasks | 2 files |
 | Phase 05 P01 | 6min | 2 tasks | 4 files |
+| Phase 05 P02 | 13min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,8 @@ Status: Ready to execute
 | GLM ms detection >1e12 heuristic | normalizeResetTime detects 13-digit GLM timestamps as milliseconds, 10-digit as seconds | 2026-04-02 |
 | Multi-window parsers with derived labels | Kimi duration/60 hours, GLM type+unit+number combinations for quota window labels | 2026-04-02 |
 | getCachedUsageData returns { data, diagnostics } | Diagnostics object enables verbose output in Plan 02 without re-fetching | 2026-04-02 |
+| exitOverride() with CommanderError catch | Commander.js throw on help/version is expected, catch specific error codes for clean exit | 2026-04-02 |
+| formatDefaultOutput shortest reset + compact time | Most urgent window is most useful for statusLine, compact format fits limited space | 2026-04-02 |
 
 ### Active TODOs
 
@@ -128,6 +131,17 @@ Status: Ready to execute
 (None)
 
 ### Session Notes
+
+**2026-04-02 - Phase 05 Plan 02 Complete (MILESTONE v1.0)**
+
+- CLI tool complete: buildPlaceholderValues, applyTemplate, formatDefaultOutput, outputVerboseInfo, runCLI
+- Commander.js integration with --json, --template, --verbose, --cache-duration, --version flags
+- Dual-mode entry point: CLI when run directly, module import clean
+- stdout/stderr separation: data to stdout, errors/debug to stderr
+- 41 Phase 05 tests pass, 221 total (2 pre-existing integration test failures)
+- All 12 Phase 05 requirements satisfied (OUT-01~05, CLI-01~07)
+- All 16 plans across 5 phases complete -- milestone v1.0 ready
+- Ready for `/gsd:complete-milestone`
 
 **2026-04-02 - Phase 05 Plan 01 Complete**
 
