@@ -43,4 +43,7 @@ coverage/
 .env.*.local
 
 # GSD planning directory (optional - uncomment if you don't want to track planning)
-# .planning/
+.planning/
+
+# Planning artifacts (local only)
+.planning/
