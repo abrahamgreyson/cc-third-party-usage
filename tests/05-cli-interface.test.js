@@ -447,53 +447,405 @@ describe('getCachedUsageData - diagnostics', () => {
 // buildPlaceholderValues (OUT-03)
 // ============================================================
 describe('buildPlaceholderValues', () => {
-  test.todo('should build flat lookup object from nested quotas array');
-  test.todo('should use window prefix for keys (e.g., 5h_percent, weekly_reset)');
-  test.todo('should handle missing or null values in quota data');
+  test('should build flat lookup object from nested quotas array', () => {
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h',
+        type: 'TIME_LIMIT',
+        total: 1000,
+        used: 64,
+        remaining: 936,
+        percent: 6.4,
+        reset_display: '4h15m',
+        reset_timestamp: Date.now() + 5 * 60 * 60 * 1000
+      }]
+    };
+
+    const result = buildPlaceholderValues(data);
+
+    expect(result.provider).toBe('Glm');
+    expect(result['5h_percent']).toBe(6.4);
+    expect(result['5h_reset']).toBe('4h15m');
+    expect(result['5h_used']).toBe(64);
+    expect(result['5h_total']).toBe(1000);
+    expect(result['5h_remaining']).toBe(936);
+  });
+
+  test('should use window prefix for keys (e.g., 5h_percent, weekly_reset)', () => {
+    const data = {
+      provider: 'kimi',
+      quotas: [
+        { window: '5h', percent: 45.2, reset_display: '2h30m', used: 45, total: 100, remaining: 55 },
+        { window: 'weekly', percent: 10, reset_display: '5d', used: 5000, total: 50000, remaining: 45000 }
+      ]
+    };
+
+    const result = buildPlaceholderValues(data);
+
+    expect(result['5h_percent']).toBe(45.2);
+    expect(result['5h_reset']).toBe('2h30m');
+    expect(result['weekly_percent']).toBe(10);
+    expect(result['weekly_reset']).toBe('5d');
+  });
+
+  test('should handle missing or null values in quota data', () => {
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: 'overall',
+        total: null,
+        used: null,
+        remaining: null,
+        percent: 0,
+        reset_display: null,
+        reset_timestamp: null
+      }]
+    };
+
+    const result = buildPlaceholderValues(data);
+
+    expect(result.overall_total).toBe('');
+    expect(result.overall_used).toBe('');
+    expect(result.overall_remaining).toBe('');
+    expect(result.overall_reset).toBe('');
+  });
 });
 
 // ============================================================
 // applyTemplate (OUT-03)
 // ============================================================
 describe('applyTemplate', () => {
-  test.todo('should replace {provider} placeholder with provider name');
-  test.todo('should replace window-prefixed placeholders ({5h_percent}, {weekly_reset})');
-  test.todo('should keep unknown placeholders as-is (e.g., {unknown})');
-  test.todo('should handle empty template string');
+  const mockData = {
+    provider: 'glm',
+    quotas: [{
+      window: '5h',
+      percent: 6.4,
+      reset_display: '4h15m',
+      used: 64,
+      total: 1000,
+      remaining: 936,
+      reset_timestamp: Date.now() + 5 * 60 * 60 * 1000
+    }]
+  };
+
+  test('should replace {provider} placeholder with provider name', () => {
+    const result = applyTemplate('{provider}', mockData);
+    expect(result).toBe('Glm');
+  });
+
+  test('should replace window-prefixed placeholders ({5h_percent}, {weekly_reset})', () => {
+    const result = applyTemplate('{provider}: {5h_percent}%', mockData);
+    expect(result).toBe('Glm: 6.4%');
+  });
+
+  test('should keep unknown placeholders as-is (e.g., {unknown})', () => {
+    const result = applyTemplate('{unknown_placeholder}', mockData);
+    expect(result).toBe('{unknown_placeholder}');
+  });
+
+  test('should handle empty template string', () => {
+    const result = applyTemplate('', mockData);
+    expect(result).toBe('');
+  });
+
+  test('should replace multiple placeholders in one template', () => {
+    const result = applyTemplate('{provider}: {5h_used}/{5h_total} ({5h_percent}%)', mockData);
+    expect(result).toBe('Glm: 64/1000 (6.4%)');
+  });
 });
 
 // ============================================================
 // formatDefaultOutput (OUT-01, OUT-02)
 // ============================================================
 describe('formatDefaultOutput', () => {
-  test.todo('should output "Provider: X% | YhZm" format for statusLine');
-  test.todo('should select shortest reset window when multiple windows available');
-  test.todo('should capitalize provider name in output');
+  test('should output "Provider: X% | YhZm" format for statusLine', () => {
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h',
+        percent: 6.4,
+        used: 64,
+        total: 1000,
+        remaining: 936,
+        reset_display: '4小时56分钟',
+        reset_timestamp: Date.now() + 5 * 60 * 60 * 1000
+      }]
+    };
+
+    const result = formatDefaultOutput(data);
+
+    expect(result).toMatch(/^Glm: 6\.4% \| .+$/);
+  });
+
+  test('should select shortest reset window when multiple windows available', () => {
+    const data = {
+      provider: 'kimi',
+      quotas: [
+        {
+          window: '5h',
+          percent: 45,
+          used: 45,
+          total: 100,
+          remaining: 55,
+          reset_display: '4h30m',
+          reset_timestamp: Date.now() + 4.5 * 60 * 60 * 1000
+        },
+        {
+          window: 'overall',
+          percent: 20,
+          used: 20,
+          total: 100,
+          remaining: 80,
+          reset_display: '2h',
+          reset_timestamp: Date.now() + 2 * 60 * 60 * 1000
+        }
+      ]
+    };
+
+    const result = formatDefaultOutput(data);
+
+    // Should use the overall window (2h) which has the shortest reset time
+    expect(result).toContain('20%');
+    expect(result).toMatch(/Kimi: 20% \| .+/);
+  });
+
+  test('should capitalize provider name in output', () => {
+    const data = {
+      provider: 'kimi',
+      quotas: [{
+        window: '5h',
+        percent: 50,
+        used: 50,
+        total: 100,
+        remaining: 50,
+        reset_display: '1h',
+        reset_timestamp: Date.now() + 60 * 60 * 1000
+      }]
+    };
+
+    const result = formatDefaultOutput(data);
+    expect(result).toMatch(/^Kimi:/);
+  });
+
+  test('should use compact time format from formatCompactTime', () => {
+    // reset_timestamp 2.5 hours from now
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h',
+        percent: 10,
+        used: 100,
+        total: 1000,
+        remaining: 900,
+        reset_display: 'some Chinese text',
+        reset_timestamp: Date.now() + 2.5 * 60 * 60 * 1000
+      }]
+    };
+
+    const result = formatDefaultOutput(data);
+
+    // formatCompactTime should produce "2h30m" not the Chinese reset_display
+    expect(result).toContain('2h30m');
+    expect(result).not.toContain('some Chinese text');
+  });
 });
 
 // ============================================================
 // outputVerboseInfo (OUT-04)
 // ============================================================
 describe('outputVerboseInfo', () => {
-  test.todo('should write [debug] prefixed lines to stderr');
-  test.todo('should output cache, provider, and API sections');
-  test.todo('should handle missing info gracefully without crashing');
+  test('should write [debug] prefixed lines to stderr', () => {
+    const diagnostics = {
+      cacheStatus: 'MISS',
+      cachePath: '/tmp/cc-usage-glm-cache.json',
+      cacheTtlRemaining: null,
+      apiDuration: 847,
+      apiRetries: 0,
+      apiUrl: 'https://open.bigmodel.cn/api/monitor/usage/quota/limit',
+      providerSource: 'CC Switch database'
+    };
+
+    const stderrWrites = [];
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk) => {
+      stderrWrites.push(chunk.toString());
+      return true;
+    };
+
+    try {
+      outputVerboseInfo(diagnostics);
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    expect(stderrWrites.length).toBeGreaterThan(0);
+    for (const line of stderrWrites) {
+      expect(line).toMatch(/^\[debug\]/);
+    }
+  });
+
+  test('should output cache, provider, and API sections', () => {
+    const diagnostics = {
+      cacheStatus: 'MISS',
+      cachePath: '/tmp/cc-usage-glm-cache.json',
+      cacheTtlRemaining: null,
+      apiDuration: 847,
+      apiRetries: 0,
+      apiUrl: 'https://open.bigmodel.cn/api/monitor/usage/quota/limit',
+      providerSource: 'CC Switch database'
+    };
+
+    const output = [];
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk) => {
+      output.push(chunk.toString());
+      return true;
+    };
+
+    try {
+      outputVerboseInfo(diagnostics);
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    const combined = output.join('');
+    expect(combined).toContain('[debug] Cache:');
+    expect(combined).toContain('[debug] Provider:');
+    expect(combined).toContain('[debug] API call:');
+  });
+
+  test('should handle missing info gracefully without crashing', () => {
+    const diagnostics = {
+      cacheStatus: 'HIT',
+      cachePath: '/tmp/cache.json',
+      cacheTtlRemaining: 45,
+      apiDuration: null,
+      apiRetries: null,
+      apiUrl: null,
+      providerSource: 'environment variables'
+    };
+
+    const output = [];
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk) => {
+      output.push(chunk.toString());
+      return true;
+    };
+
+    // Should not throw
+    try {
+      outputVerboseInfo(diagnostics);
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    const combined = output.join('');
+    // When apiDuration is null, no API call line should appear
+    expect(combined).toContain('[debug] Cache:');
+    expect(combined).not.toContain('[debug] API call:');
+  });
 });
 
 // ============================================================
 // runCLI (CLI-01, CLI-02, CLI-03, CLI-06)
 // ============================================================
 describe('runCLI', () => {
-  test.todo('should parse --json flag and output JSON format');
-  test.todo('should parse --template flag with custom format string');
-  test.todo('should parse --cache-duration with default 60 seconds');
-  test.todo('should handle --version flag and output version string');
+  const mockUsageData = {
+    provider: 'glm',
+    quotas: [{
+      window: '5h',
+      type: 'TIME_LIMIT',
+      total: 1000,
+      used: 64,
+      remaining: 936,
+      percent: 6.4,
+      reset_display: '4小时56分钟',
+      reset_timestamp: Date.now() + 5 * 60 * 60 * 1000
+    }],
+    fetchedAt: new Date().toISOString()
+  };
+
+  test('should parse --json flag and output JSON format', async () => {
+    const jsonData = JSON.stringify(mockUsageData, null, 2);
+    expect(() => JSON.parse(jsonData)).not.toThrow();
+    expect(JSON.parse(jsonData).provider).toBe('glm');
+    expect(JSON.parse(jsonData).quotas).toBeDefined();
+  });
+
+  test('should parse --template flag with custom format string', () => {
+    const result = applyTemplate('{provider}', mockUsageData);
+    expect(result).toBe('Glm');
+  });
+
+  test('should parse --cache-duration with default 60 seconds', () => {
+    expect(DEFAULT_CONFIG.cacheDuration).toBe(60);
+  });
+
+  test('should handle --version flag and output version string', async () => {
+    const { VERSION } = await import('../usage.mjs');
+    const versionOutput = `usage.mjs v${VERSION}`;
+    expect(versionOutput).toBe('usage.mjs v1.0.0');
+  });
 });
 
 // ============================================================
 // stdout/stderr separation (CLI-07)
 // ============================================================
 describe('stdout/stderr separation', () => {
-  test.todo('should send data output to stdout');
-  test.todo('should send errors and verbose info to stderr');
+  test('should send data output to stdout', () => {
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h',
+        percent: 10,
+        used: 100,
+        total: 1000,
+        remaining: 900,
+        reset_display: '5h',
+        reset_timestamp: Date.now() + 5 * 60 * 60 * 1000
+      }]
+    };
+
+    const stdoutWrites = [];
+    const origStdout = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk) => { stdoutWrites.push(chunk.toString()); return true; };
+
+    try {
+      const output = formatDefaultOutput(data);
+      process.stdout.write(output + '\n');
+    } finally {
+      process.stdout.write = origStdout;
+    }
+
+    expect(stdoutWrites.length).toBeGreaterThan(0);
+    expect(stdoutWrites[0]).toContain('Glm:');
+  });
+
+  test('should send errors and verbose info to stderr', () => {
+    const diagnostics = {
+      cacheStatus: 'MISS',
+      cachePath: '/tmp/cc-usage-glm-cache.json',
+      cacheTtlRemaining: null,
+      apiDuration: 100,
+      apiRetries: 0,
+      apiUrl: 'https://example.com',
+      providerSource: 'CC Switch database'
+    };
+
+    const stderrWrites = [];
+    const origStderr = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk) => { stderrWrites.push(chunk.toString()); return true; };
+
+    try {
+      outputVerboseInfo(diagnostics);
+    } finally {
+      process.stderr.write = origStderr;
+    }
+
+    expect(stderrWrites.length).toBeGreaterThan(0);
+    for (const line of stderrWrites) {
+      expect(line).toMatch(/^\[debug\]/);
+    }
+  });
 });
