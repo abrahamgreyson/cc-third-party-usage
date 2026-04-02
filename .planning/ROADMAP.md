@@ -115,7 +115,7 @@ Plans:
 **Plans:** 3 plans in 3 waves
 Plans:
 - [x] 05-00-PLAN.md -- Wave 0: test infrastructure + Commander.js install
-- [ ] 05-01-PLAN.md -- Wave 1: parser backport + compact time formatter + data pipeline update
+- [x] 05-01-PLAN.md -- Wave 1: parser backport + compact time formatter + data pipeline update
 - [ ] 05-02-PLAN.md -- Wave 2: output formatters + CLI entry point
 
 ## Progress

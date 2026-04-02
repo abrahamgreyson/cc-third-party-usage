@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-02T05:08:19.440Z"
+last_updated: "2026-04-02T06:21:04.453Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 16
-  completed_plans: 14
-  percent: 88
+  completed_plans: 15
+  percent: 94
 ---
 
 # Project State: cc-third-party-usage
 
 **Last Updated:** 2026-04-02
 **Phase:** 5
-**Status:** Executing Phase 05 - Plan 00 complete
+**Status:** Executing Phase 05 - Plan 01 complete
 
 ## Project Reference
 
@@ -34,13 +34,13 @@ progress:
 ## Current Position
 
 Phase: 05 (cli-interface-output-formatting) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 **Phase:** 1 - Core Infrastructure
 **Status:** ✅ COMPLETED - All 4 waves finished
 **Progress:**
 
-[█████████░] 88%
+[█████████░] 94%
 [████████████████████] 100% - Core Infrastructure Complete
 
 ```
@@ -97,6 +97,7 @@ Status: Ready to execute
 | Phase 04 P00 | 2min | 1 tasks | 1 files |
 | Phase 04 P01 | 6min | 1 tasks | 2 files |
 | Phase 05 P00 | 2min | 1 tasks | 2 files |
+| Phase 05 P01 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ Status: Ready to execute
 | WAL mode + 10s busy timeout | Enables concurrent read/write without SQLITE_BUSY errors | 2026-04-01 |
 | Commander.js 14.0.3 as sole external dependency | Minimal, zero sub-dependencies, widely adopted CLI parser per CLAUDE.md recommendation | 2026-04-02 |
 | Dynamic try/catch import for test stubs | Consistent with Phase 04 pattern -- allows test file to load even when functions not yet exported | 2026-04-02 |
+| GLM ms detection >1e12 heuristic | normalizeResetTime detects 13-digit GLM timestamps as milliseconds, 10-digit as seconds | 2026-04-02 |
+| Multi-window parsers with derived labels | Kimi duration/60 hours, GLM type+unit+number combinations for quota window labels | 2026-04-02 |
+| getCachedUsageData returns { data, diagnostics } | Diagnostics object enables verbose output in Plan 02 without re-fetching | 2026-04-02 |
 
 ### Active TODOs
 
@@ -124,6 +128,17 @@ Status: Ready to execute
 (None)
 
 ### Session Notes
+
+**2026-04-02 - Phase 05 Plan 01 Complete**
+
+- Multi-window parsers: parseKimiResponse captures usage + all limits[], parseGLMResponse captures all limit types
+- formatCompactTime: compact format for statusLine (2h30m, 3d12h, 45m15s)
+- Fixed normalizeResetTime millisecond bug for GLM 13-digit timestamps
+- Data pipeline returns nested { provider, quotas, fetchedAt } structure
+- getCachedUsageData returns { data, diagnostics } with cache/API metadata
+- Updated tests in 03-api-integration and 04-caching-layer for new signatures
+- 200 tests pass, 19 todo (Plan 02), 2 fail (pre-existing integration tests)
+- Ready for Plan 02: output formatters and CLI interface
 
 **2026-04-02 - Phase 05 Plan 00 Complete**
 
