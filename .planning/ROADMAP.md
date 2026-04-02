@@ -95,7 +95,7 @@ plans:
 **Plans:** 2 plans in 2 waves
 Plans:
 - [x] 04-00-PLAN.md — Wave 0: test infrastructure (test stubs for CACHE-01~05)
-- [ ] 04-01-PLAN.md — Wave 1: cache core functions (getCacheFilePath, readCache, writeCache, getCachedUsageData)
+- [x] 04-01-PLAN.md — Wave 1: cache core functions (getCacheFilePath, readCache, writeCache, getCachedUsageData)
 
 ### Phase 5: CLI Interface & Output Formatting
 **Goal:** users have flexible output options optimized for statusLine integration while supporting custom templates and machine-readable formats.
