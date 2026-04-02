@@ -171,8 +171,8 @@ The tool automatically detects API credentials from:
 
 | Provider | API Endpoint | Description |
 |----------|--------------|-------------|
-| **Kimi** | `api.kimi.com` | Moonshot AI API |
-| **GLM** | `open.bigmodel.cn` | Zhipu AI API |
+| **Kimi** | api.kimi.com | Moonshot AI |
+| **GLM** | open.bigmodel.cn | Zhipu AI |
 
 ### Cache Location
 

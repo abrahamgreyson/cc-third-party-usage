@@ -1316,15 +1316,29 @@ async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, 
 ///// CLI Interface /////
 
 /**
+ * Format provider name with proper capitalization.
+ * Kimi -> "Kimi", glm -> "GLM"
+ * @param {string} provider - Provider identifier ('kimi' or 'glm')
+ * @returns {string} Formatted provider name
+ */
+function formatProviderName(provider) {
+  if (provider === 'glm') {
+    return 'GLM';
+  }
+  // Default: capitalize first letter (kimi -> Kimi)
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+/**
  * Build flat placeholder values from nested data structure.
  * Per D-06, D-07: Window-prefixed keys for template substitution.
- * Provider name is capitalized (per D-03: "Kimi" not "kimi").
+ * Provider name is capitalized (per D-03: "Kimi" not "kimi", "GLM" not "glm").
  * @param {{ provider: string, quotas: Array }} data - Normalized usage data
  * @returns {Object} Flat key-value lookup for template substitution
  */
 function buildPlaceholderValues(data) {
   const values = {
-    provider: data.provider.charAt(0).toUpperCase() + data.provider.slice(1)
+    provider: formatProviderName(data.provider)
   };
 
   for (const quota of data.quotas) {
@@ -1370,7 +1384,7 @@ function applyTemplate(template, data) {
 
 /**
  * Format default output for statusLine display.
- * Per D-03: "Provider: X% | YhZm" format with uppercase provider.
+ * Per D-03: "Provider: X% | YhZm" format with proper capitalization.
  * Per D-05: Selects quota with shortest remaining reset time.
  * Per OUT-02: Uses formatCompactTime for compact reset display.
  * @param {{ provider: string, quotas: Array }} data - Normalized usage data
@@ -1384,9 +1398,9 @@ function formatDefaultOutput(data) {
     return aTime - bTime;
   });
   const quota = sortedQuotas[0] || data.quotas[0];
-  if (!quota) return `${data.provider}: no quota data`;
+  if (!quota) return `${formatProviderName(data.provider)}: no quota data`;
 
-  const providerName = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+  const providerName = formatProviderName(data.provider);
   let compactReset;
   if (quota.reset_timestamp && quota.reset_timestamp > 0) {
     const remainingMs = quota.reset_timestamp - Date.now();
