@@ -92,7 +92,10 @@ plans:
 4. user sees stale data immediately on cache hit (no delay for statusLine refresh)
 5. cache includes timestamp, provider name, and complete normalized usage data structure
 
-**Plans:** TBD
+**Plans:** 2 plans in 2 waves
+Plans:
+- [x] 04-00-PLAN.md — Wave 0: test infrastructure (test stubs for CACHE-01~05)
+- [ ] 04-01-PLAN.md — Wave 1: cache core functions (getCacheFilePath, readCache, writeCache, getCachedUsageData)
 
 ### Phase 5: CLI Interface & Output Formatting
 **Goal:** users have flexible output options optimized for statusLine integration while supporting custom templates and machine-readable formats.
@@ -117,7 +120,7 @@ plans:
 | 1. core infrastructure | 4/4 | Completed | 2026-04-01 |
 | 2. proxy penetration & provider detection | 3/3 | Completed | 2026-04-01 |
 | 3. api integration & data normalization | 0/4 | Ready for execution | - |
-| 4. caching layer | 0/1 | Not started | - |
+| 4. caching layer | 0/2 | Planned | - |
 | 5. cli interface & output formatting | 0/1 | Not started | - |
 
 ## Notes
@@ -127,4 +130,4 @@ plans:
 - **Research flags:** Phase 2 (CC Switch schema exploration) and Phase 3 (API response validation) need deeper research during planning
 ---
 *Roadmap created: 2026-03-31*
-*roadmap updated: 2026-04-01*
+*roadmap updated: 2026-04-02*

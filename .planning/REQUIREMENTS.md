@@ -43,11 +43,11 @@
 
 ### Caching
 
-- [ ] **CACHE-01**: Implement JSON file cache at `~/.cc-switch/usage_cache.json`
-- [ ] **CACHE-02**: Default 60-second cache duration
-- [ ] **CACHE-03**: Support configurable cache duration via `--cache-duration` flag
-- [ ] **CACHE-04**: Atomic cache writes (write to temp file, then rename) to prevent race conditions
-- [ ] **CACHE-05**: Cache includes timestamp, provider, and normalized usage data
+- [x] **CACHE-01**: Implement JSON file cache at `~/.cc-switch/usage_cache.json`
+- [x] **CACHE-02**: Default 60-second cache duration
+- [x] **CACHE-03**: Support configurable cache duration via `--cache-duration` flag
+- [x] **CACHE-04**: Atomic cache writes (write to temp file, then rename) to prevent race conditions
+- [x] **CACHE-05**: Cache includes timestamp, provider, and normalized usage data
 
 ### Output Formatting
 
@@ -152,11 +152,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NORM-02 | Phase 3 | Complete |
 | NORM-03 | Phase 3 | Complete |
 | NORM-04 | Phase 3 | Complete |
-| CACHE-01 | Phase 4 | Pending |
-| CACHE-02 | Phase 4 | Pending |
-| CACHE-03 | Phase 4 | Pending |
-| CACHE-04 | Phase 4 | Pending |
-| CACHE-05 | Phase 4 | Pending |
+| CACHE-01 | Phase 4 | Complete |
+| CACHE-02 | Phase 4 | Complete |
+| CACHE-03 | Phase 4 | Complete |
+| CACHE-04 | Phase 4 | Complete |
+| CACHE-05 | Phase 4 | Complete |
 | OUT-01 | Phase 5 | Pending |
 | OUT-02 | Phase 5 | Pending |
 | OUT-03 | Phase 5 | Pending |
