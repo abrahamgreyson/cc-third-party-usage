@@ -228,9 +228,13 @@ describe('writeCache', () => {
     const parsed = JSON.parse(content);
     expect(parsed).toBeDefined();
 
-    // Verify no temp file left behind
-    const tempPath = `${filePath}.${process.pid}.tmp`;
-    expect(existsSync(tempPath)).toBe(false);
+    // Verify no temp file left behind (check for any .tmp file matching pattern)
+    const tmpFiles = await import('fs/promises').then(m =>
+      m.readdir(join(filePath, '..')).then(files =>
+        files.filter(f => f.startsWith('cc-usage-test-atomic') && f.endsWith('.tmp'))
+      ).catch(() => [])
+    );
+    expect(tmpFiles.length).toBe(0);
 
     await unlink(filePath);
   });

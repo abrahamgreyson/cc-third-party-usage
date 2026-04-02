@@ -465,7 +465,9 @@ async function fetchWithRetry(url, options = {}) {
 
 ///// Path Utilities /////
 
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
+import { join } from 'path';
+import { readFile as fsReadFile, writeFile as fsWriteFile, rename as fsRename, unlink as fsUnlink } from 'fs/promises';
 
 /**
  * Expands ~ in path to user's home directory.
@@ -1126,6 +1128,113 @@ function parseGLMResponse(response) {
   };
 }
 
+///// Caching Layer /////
+
+/**
+ * Get cache file path for a given provider.
+ * Per D-03: Uses os.tmpdir() for cross-platform temp directory.
+ * Per D-04: Filename pattern cc-usage-${provider}-cache.json.
+ * @param {string} provider - Provider name ('kimi' or 'glm')
+ * @returns {string} Absolute path to cache file
+ */
+function getCacheFilePath(provider) {
+  return join(tmpdir(), `cc-usage-${provider}-cache.json`);
+}
+
+/**
+ * Read cache file and check TTL expiration.
+ * Per D-05: Strict TTL -- expired cache returns null.
+ * Per D-08: Fail-open -- any error returns null (never throws).
+ * @param {string} filePath - Path to cache file
+ * @param {number} maxAgeMs - Maximum age in milliseconds
+ * @returns {Promise<object|null>} Cached data or null if expired/missing
+ */
+async function readCache(filePath, maxAgeMs) {
+  try {
+    const content = await fsReadFile(filePath, 'utf-8');
+    const data = JSON.parse(content);
+
+    // Strict TTL check per D-05
+    if (Date.now() - data.timestamp > maxAgeMs) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null; // Fail-open per D-08
+  }
+}
+
+/**
+ * Generate a unique temp file path for atomic writes.
+ * Uses process.pid + random suffix to prevent collisions between
+ * concurrent writes from the same process.
+ * @param {string} filePath - Target cache file path
+ * @returns {string} Unique temp file path
+ */
+function getTempFilePath(filePath) {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${filePath}.${process.pid}.${Date.now()}-${rand}.tmp`;
+}
+
+/**
+ * Write data to cache file atomically using write-then-rename.
+ * Per D-07: Write to temp file with process.pid suffix, then rename.
+ * Per D-08: Fail-open -- errors are silently swallowed.
+ * @param {string} filePath - Target cache file path
+ * @param {object} data - Data to cache
+ * @returns {Promise<void>}
+ */
+async function writeCache(filePath, data) {
+  const tempPath = getTempFilePath(filePath);
+  try {
+    await fsWriteFile(tempPath, JSON.stringify(data));
+    await fsRename(tempPath, filePath);
+  } catch (error) {
+    // Clean up temp file on failure
+    try { await fsUnlink(tempPath); } catch {}
+    // Fail-open per D-08: don't throw
+  }
+}
+
+/**
+ * Get usage data with cache-first strategy.
+ * Per D-06: Blocking refresh -- wait for API when cache miss.
+ * Per D-10: Cache-first flow: read cache -> return if valid -> API call -> write cache -> return data.
+ * Per D-02: Cache structure { timestamp, provider, total, used, remaining, percent, reset_display }.
+ * @param {number} [cacheDuration=DEFAULT_CONFIG.cacheDuration] - Cache TTL in seconds
+ * @param {string} [provider=null] - Provider name for cache lookup (optional)
+ * @returns {Promise<{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }>}
+ */
+async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, provider = null) {
+  const maxAgeMs = cacheDuration * 1000;
+
+  // Step 1: Try cache read if provider is known
+  if (provider) {
+    const filePath = getCacheFilePath(provider);
+    const cached = await readCache(filePath, maxAgeMs);
+    if (cached) return cached;
+  }
+
+  // Step 2: Cache miss or unknown provider -- fetch from API
+  const data = await getUsageData();
+
+  // Step 3: Write to cache using provider from response
+  const filePath = getCacheFilePath(data.provider);
+  writeCache(filePath, {
+    timestamp: Date.now(),
+    provider: data.provider,
+    total: data.total,
+    used: data.used,
+    remaining: data.remaining,
+    percent: data.percent,
+    reset_display: data.reset_display
+  }); // Fire-and-forget per D-10
+
+  // Step 4: Return data
+  return data;
+}
+
 ///// CLI Interface /////
 ///// Entry Point /////
 
@@ -1170,4 +1279,8 @@ export {
   calculatePercentage,
   normalizeUsageData,
   getUsageData,
+  getCacheFilePath,
+  readCache,
+  writeCache,
+  getCachedUsageData,
 };
