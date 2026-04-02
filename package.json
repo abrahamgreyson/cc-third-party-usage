@@ -1,9 +1,48 @@
 {
   "name": "cc-third-party-usage",
   "version": "1.0.0",
-  "type": "module",
   "description": "AI API Usage Monitor - Query Kimi and GLM API usage with CC Switch proxy detection",
+  "type": "module",
+  "main": "usage.mjs",
+  "bin": {
+    "cc-usage": "./usage.mjs"
+  },
+  "scripts": {
+    "test": "bun test",
+    "start": "bun usage.mjs"
+  },
+  "keywords": [
+    "claude-code",
+    "kimi",
+    "glm",
+    "api-usage",
+    "monitoring",
+    "cli",
+    "cc-switch",
+    "statusline",
+    "ai-api",
+    "quota-tracker"
+  ],
+  "author": "Abraham Greyson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abrahamgreyson/cc-third-party-usage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abrahamgreyson/cc-third-party-usage/issues"
+  },
+  "homepage": "https://github.com/abrahamgreyson/cc-third-party-usage#readme",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "files": [
+    "usage.mjs",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
-    "commander": "14.0.3"
+    "commander": "^14.0.3"
   }
 }

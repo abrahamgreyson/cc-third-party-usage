@@ -1,0 +1,31 @@
+# Tests
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Development files
+.planning/
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# Claude Code
+.claude/
