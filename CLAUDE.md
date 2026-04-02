@@ -3,9 +3,9 @@
 
 **AI API Usage Monitor**
 
-A high-performance single-file CLI tool (`usage.mjs`) that queries Kimi and GLM API usage with intelligent CC Switch proxy detection. Primarily designed for Claude Code statusLine integration to display real-time usage monitoring, while also supporting manual queries and automated monitoring scenarios.
+A high-performance single-file CLI tool (`usage.mjs`) that monitors Kimi and GLM API usage with automatic configuration detection. Primarily designed for Claude Code statusLine integration to display real-time usage monitoring, while also supporting manual queries and automated monitoring scenarios.
 
-**Core Value:** Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero-configuration auto-detection and cache-optimized for frequent status bar refreshes.
+**Core Value:** Seamlessly surface AI API usage data for third-party models (Kimi and GLM), with zero-configuration auto-detection and cache-optimized for frequent status bar refreshes.
 
 ### Constraints
 
@@ -13,7 +13,7 @@ A high-performance single-file CLI tool (`usage.mjs`) that queries Kimi and GLM 
 - **Runtime Compatibility:** Must work identically on Bun and Node.js without transpilation
 - **Performance:** StatusLine invocations must complete within 2 seconds (cache helps)
 - **SQLite Access:** Use Bun's built-in `bun:sqlite` or Node's `node:sqlite` (no external dependencies)
-- **Error Handling:** Failed CC Switch penetration must exit with error (no silent fallback)
+- **Error Handling:** Failed credential detection must exit with error (no silent fallback)
 - **Cache Duration:** Default 60 seconds, user-configurable via CLI flag
 <!-- GSD:project-end -->
 

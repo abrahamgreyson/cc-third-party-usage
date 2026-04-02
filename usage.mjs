@@ -5,7 +5,7 @@ import { Command } from 'commander';
 ///// Metadata /////
 
 const VERSION = '1.0.0';
-const DESCRIPTION = 'AI API Usage Monitor - Query Kimi and GLM API usage with CC Switch proxy detection';
+const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
 
 ///// Constants & Configuration /////
 
@@ -494,8 +494,8 @@ function expandHomePath(path) {
 const CC_SWITCH_DB_PATH = '~/.cc-switch/cc-switch.db';
 
 /**
- * Extracts API credentials from CC Switch SQLite database.
- * Per D-03: Fixed database path ~/.cc-switch/cc-switch.db
+ * Extracts API credentials from local proxy database (if configured).
+ * Per D-03: Database path ~/.cc-switch/cc-switch.db with ~ expansion.
  * Per D-04: Query providers table, settings_config field, id='default'
  * Per D-06: Fail-fast with ConfigError, no fallback to env vars
  * @returns {Promise<{ apiKey: string, baseUrl: string }>}
@@ -509,8 +509,8 @@ async function getProxyCredentials() {
     db = await openDatabase(dbPath);
   } catch (error) {
     throw new ConfigError(
-      `Failed to open CC Switch database at ${dbPath}: ${error.message}. ` +
-      'Verify CC Switch is installed and configured.'
+      `Failed to open local proxy database at ${dbPath}: ${error.message}. ` +
+      'Verify your proxy configuration is correct.'
     );
   }
 
@@ -519,8 +519,8 @@ async function getProxyCredentials() {
 
     if (!result || !result.settings_config) {
       throw new ConfigError(
-        'CC Switch database has no default provider configuration. ' +
-        'Verify CC Switch is properly configured.'
+        'Local proxy database has no default provider configuration. ' +
+        'Verify your proxy is properly configured.'
       );
     }
 
@@ -529,8 +529,8 @@ async function getProxyCredentials() {
       config = JSON.parse(result.settings_config);
     } catch (parseError) {
       throw new ConfigError(
-        `Failed to parse CC Switch configuration: ${parseError.message}. ` +
-        'Database may be corrupted. Try reconfiguring CC Switch.'
+        `Failed to parse proxy configuration: ${parseError.message}. ` +
+        'Configuration may be corrupted. Try reconfiguring your proxy.'
       );
     }
 
@@ -539,17 +539,17 @@ async function getProxyCredentials() {
 
     if (!apiKey) {
       throw new ConfigError(
-        'CC Switch database missing ANTHROPIC_AUTH_TOKEN. ' +
+        'Proxy configuration missing ANTHROPIC_AUTH_TOKEN. ' +
         'Expected env.ANTHROPIC_AUTH_TOKEN in settings_config. ' +
-        'Verify CC Switch is properly configured.'
+        'Verify your proxy configuration.'
       );
     }
 
     if (!baseUrl) {
       throw new ConfigError(
-        'CC Switch database missing ANTHROPIC_BASE_URL. ' +
+        'Proxy configuration missing ANTHROPIC_BASE_URL. ' +
         'Expected env.ANTHROPIC_BASE_URL in settings_config. ' +
-        'Verify CC Switch is properly configured.'
+        'Verify your proxy configuration.'
       );
     }
 
@@ -562,7 +562,7 @@ async function getProxyCredentials() {
 /**
  * Reads API credentials from environment variables.
  * Per D-07: Read ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN
- * Used when no CC Switch proxy is detected.
+ * Used when no local proxy is detected.
  * @returns {{ apiKey: string }}
  * @throws {ConfigError} If no credentials found in environment
  */
@@ -573,7 +573,7 @@ function getEnvCredentials() {
     throw new ConfigError(
       'No API credentials found. ' +
       'Set ANTHROPIC_API_KEY environment variable, ' +
-      'or configure CC Switch proxy for automatic credential detection.'
+      'or configure a local proxy for automatic credential detection.'
     );
   }
 
@@ -614,7 +614,7 @@ function getLocalAddressPatterns() {
 }
 
 /**
- * Detects if CC Switch proxy is enabled by checking environment variables.
+ * Detects if local proxy is enabled by checking environment variables.
  * Per D-01: Check only ANTHROPIC_BASE_URL and BASE_URL
  * Per D-02: Match against localhost, 127.0.0.1, 0.0.0.0
  * @returns {boolean} True if proxy is detected
@@ -827,7 +827,7 @@ async function queryProviderAPI() {
   if (!provider) {
     throw new ConfigError(
       'Cannot detect provider: no baseUrl available. ' +
-      'When using environment variables without CC Switch proxy, ' +
+      'When using environment variables without proxy, ' +
       'this function requires manual provider specification.'
     );
   }

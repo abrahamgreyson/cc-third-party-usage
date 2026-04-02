@@ -1,17 +1,17 @@
 # CC Third Party Usage Monitor
 
-> Cross-runtime CLI tool for monitoring Kimi and GLM API usage with CC Switch proxy auto-penetration
+> Cross-runtime CLI tool for monitoring Kimi and GLM API usage with automatic configuration detection
 
 [![npm version](https://badge.fury.io/js/cc-third-party-usage.svg)](https://badge.fury.io/js/cc-third-party-usage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## ✨ Features
 
-- **Zero-Configuration** - Auto-detects CC Switch proxy and extracts credentials from `~/.cc-switch/cc-switch.db`
+- **Multi-Provider Support** - Monitor Kimi (Moonshot) and GLM (Zhipu AI) API usage
+- **Auto-Configuration** - Detects API credentials from environment or local proxy automatically
 - **Cross-Runtime** - Works on Bun 1.3.10+ and Node.js 22.5.0+
 - **Intelligent Caching** - 60s TTL with atomic writes, optimized for statusLine refresh
 - **Flexible Output** - Default concise format, JSON, or custom templates
-- **Multi-Provider** - Supports Kimi (Moonshot) and GLM (Zhipu AI) APIs
 
 ## 📦 Usage
 
@@ -161,11 +161,18 @@ cc-usage --template "{percent}% used, {remaining} remaining"
 
 ### Environment Variables
 
-The tool automatically detects credentials from:
-1. **CC Switch proxy** (`~/.cc-switch/cc-switch.db`) - if `ANTHROPIC_BASE_URL` contains `localhost`
+The tool automatically detects API credentials from:
+1. **Local proxy database** (if `ANTHROPIC_BASE_URL` points to localhost) - for proxy users
 2. **Environment variables** (fallback):
    - `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`
    - `ANTHROPIC_BASE_URL` or `BASE_URL`
+
+### Supported Providers
+
+| Provider | API Endpoint | Description |
+|----------|--------------|-------------|
+| **Kimi** | `api.kimi.com` | Moonshot AI API |
+| **GLM** | `open.bigmodel.cn` | Zhipu AI API |
 
 ### Cache Location
 
@@ -176,14 +183,14 @@ Cache files are stored in system temp directory:
 ## 🛠️ Requirements
 
 - **Runtime**: Bun 1.3.10+ or Node.js 22.5.0+
-- **API Key**: Kimi or GLM API key (via CC Switch or environment variable)
+- **API Key**: Kimi or GLM API key (via environment variable or proxy)
 
 ## 🗺️ Roadmap
 
 **v1.0 (Current)**
 - Core infrastructure with cross-runtime support
-- CC Switch proxy auto-penetration
-- Unified API integration (Kimi + GLM)
+- Kimi and GLM API integration
+- Automatic credential detection
 - Intelligent caching layer
 - Flexible CLI interface
 
