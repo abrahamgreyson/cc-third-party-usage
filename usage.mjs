@@ -907,6 +907,87 @@ function normalizeResetTime(resetTime) {
   return formatTimeRemaining(remainingMs);
 }
 
+/**
+ * Calculate usage percentage.
+ * Per D-08: Formula Math.round((used / total) * 100, 2)
+ * Per NORM-02: Calculate (used / total) * 100.
+ * @param {number} used - Used quota
+ * @param {number} total - Total quota
+ * @returns {number} Percentage used (0-100+, rounded to 2 decimals)
+ * @throws {APIError} If total is zero or negative
+ */
+function calculatePercentage(used, total) {
+  // Edge case protection per RESEARCH.md Pitfall 4
+  if (total <= 0) {
+    throw new APIError(
+      `Invalid quota total: ${total}. ` +
+      `Total must be greater than zero to calculate percentage.`
+    );
+  }
+
+  // Per D-08: Round to 2 decimal places
+  // Note: Can exceed 100% if over quota (per Open Question 3 in RESEARCH.md)
+  return Math.round((used / total) * 100 * 100) / 100;
+}
+
+/**
+ * Normalize raw usage data to standard format.
+ * Per D-09: Output structure { total, used, remaining, percent, reset_display, provider }.
+ * Per NORM-01: Standardized format for all providers.
+ * @param {{ used: number, total: number, reset: string|number }} rawData - Raw data from parser
+ * @param {'kimi'|'glm'} provider - Provider type
+ * @returns {{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }}
+ */
+function normalizeUsageData(rawData, provider) {
+  const { used, total, reset } = rawData;
+
+  // Calculate percentage per D-08, NORM-02
+  const percent = calculatePercentage(used, total);
+
+  // Calculate remaining
+  const remaining = total - used;
+
+  // Convert reset time per D-07, NORM-03, NORM-04
+  const reset_display = normalizeResetTime(reset);
+
+  // Standard output structure per D-09, NORM-01
+  return {
+    total,
+    used,
+    remaining,
+    percent,
+    reset_display,
+    provider
+  };
+}
+
+/**
+ * Get normalized usage data from provider API.
+ * Main entry point that orchestrates: query -> parse -> normalize.
+ * @returns {Promise<{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }>}
+ * @throws {ConfigError|NetworkError|APIError} On any failure in the pipeline
+ */
+async function getUsageData() {
+  // Step 1: Query provider API (handles credentials, routing, HTTP)
+  const { response, provider } = await queryProviderAPI();
+
+  // Step 2: Parse response with provider-specific parser
+  let rawData;
+  if (provider === 'kimi') {
+    rawData = parseKimiResponse(response);
+  } else if (provider === 'glm') {
+    rawData = parseGLMResponse(response);
+  } else {
+    throw new ConfigError(
+      `Unsupported provider for parsing: ${provider}. ` +
+      `This should not happen if queryProviderAPI works correctly.`
+    );
+  }
+
+  // Step 3: Normalize to standard format
+  return normalizeUsageData(rawData, provider);
+}
+
 ///// Response Parsers /////
 
 /**
@@ -1086,4 +1167,7 @@ export {
   parseGLMResponse,
   formatTimeRemaining,
   normalizeResetTime,
+  calculatePercentage,
+  normalizeUsageData,
+  getUsageData,
 };
