@@ -1,11 +1,11 @@
 {
   "name": "cc-third-party-usage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI API Usage Monitor - Query Kimi and GLM API usage with CC Switch proxy detection",
   "type": "module",
   "main": "usage.mjs",
   "bin": {
-    "cc-usage": "./usage.mjs"
+    "cc-usage": "usage.mjs"
   },
   "scripts": {
     "test": "bun test",

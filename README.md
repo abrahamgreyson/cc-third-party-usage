@@ -13,18 +13,37 @@
 - **Flexible Output** - Default concise format, JSON, or custom templates
 - **Multi-Provider** - Supports Kimi (Moonshot) and GLM (Zhipu AI) APIs
 
-## 📦 Installation
+## 📦 Usage
 
-### From npm
+### No Installation Required (Recommended)
+
+Run directly with **npx** or **bunx**:
 
 ```bash
-npm install -g cc-third-party-usage
+# Using npx (Node.js)
+npx cc-third-party-usage
+
+# Using bunx (Bun)
+bunx cc-third-party-usage
+
+# With options
+npx cc-third-party-usage --json
+bunx cc-third-party-usage --template "{provider}: {used}/{total}"
 ```
 
-### From Bun
+### Global Installation
+
+Install globally for frequent use:
 
 ```bash
+# Using npm
+npm install -g cc-third-party-usage
+
+# Using Bun
 bun install -g cc-third-party-usage
+
+# Then run anywhere
+cc-usage
 ```
 
 ### From Source
@@ -159,40 +178,24 @@ Cache files are stored in system temp directory:
 - **Runtime**: Bun 1.3.10+ or Node.js 22.5.0+
 - **API Key**: Kimi or GLM API key (via CC Switch or environment variable)
 
-## 📊 Stats
-
-- **5 phases**, 17 plans
-- **226 tests** passing
-- **47 requirements** satisfied (100%)
-- **5,402 LOC**
-- **Zero external dependencies** (except Commander.js)
-
 ## 🗺️ Roadmap
 
-### v1.0 (Current)
-- ✅ Core infrastructure with cross-runtime support
-- ✅ CC Switch proxy auto-penetration
-- ✅ Unified API integration (Kimi + GLM)
-- ✅ Intelligent caching layer
-- ✅ Flexible CLI interface
+**v1.0 (Current)**
+- Core infrastructure with cross-runtime support
+- CC Switch proxy auto-penetration
+- Unified API integration (Kimi + GLM)
+- Intelligent caching layer
+- Flexible CLI interface
 
-### v1.1 (Planned)
-- Additional provider support (beyond Kimi/GLM)
+**v1.1 (Planned)**
+- Additional provider support
 - Configuration file support (YAML/JSON)
 - Usage history export (CSV/JSON)
 - Watch mode for continuous monitoring
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## 📝 License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## 🙏 Credits
-
-Built with [Claude Code](https://claude.ai/code) using the [Get Shit Done](https://github.com/anthropics/get-shit-done) workflow.
 
 ## 📮 Links
 
