@@ -1,0 +1,9 @@
+{
+  "name": "cc-third-party-usage",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI API Usage Monitor - Query Kimi and GLM API usage with CC Switch proxy detection",
+  "dependencies": {
+    "commander": "14.0.3"
+  }
+}
