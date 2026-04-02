@@ -510,6 +510,51 @@ describe('buildPlaceholderValues', () => {
     expect(result.overall_remaining).toBe('');
     expect(result.overall_reset).toBe('');
   });
+
+  test('should include bare placeholder keys (total, used, remaining, percent, reset) from shortest-reset-window quota', () => {
+    const now = Date.now();
+    const data = {
+      provider: 'glm',
+      quotas: [
+        {
+          window: '5h', type: 'TIME_LIMIT', total: 1000, used: 64,
+          remaining: 936, percent: 6.4, reset_display: '4h15m',
+          reset_timestamp: now + 4.5 * 60 * 60 * 1000
+        },
+        {
+          window: 'weekly', type: 'TOKENS_LIMIT', total: 50000, used: 7500,
+          remaining: 42500, percent: 15, reset_display: '5d',
+          reset_timestamp: now + 5 * 24 * 60 * 60 * 1000
+        }
+      ]
+    };
+
+    const result = buildPlaceholderValues(data);
+
+    // Bare keys should use the 5h window (shortest reset)
+    expect(result.total).toBe(1000);
+    expect(result.used).toBe(64);
+    expect(result.remaining).toBe(936);
+    expect(result.percent).toBe(6.4);
+    expect(result.reset).toBe('4h15m');
+  });
+
+  test('should use empty string for bare placeholders when quota values are null', () => {
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: 'overall', total: null, used: null, remaining: null,
+        percent: 0, reset_display: null, reset_timestamp: null
+      }]
+    };
+
+    const result = buildPlaceholderValues(data);
+
+    expect(result.total).toBe('');
+    expect(result.used).toBe('');
+    expect(result.remaining).toBe('');
+    expect(result.reset).toBe('');
+  });
 });
 
 // ============================================================
@@ -552,6 +597,58 @@ describe('applyTemplate', () => {
   test('should replace multiple placeholders in one template', () => {
     const result = applyTemplate('{provider}: {5h_used}/{5h_total} ({5h_percent}%)', mockData);
     expect(result).toBe('Glm: 64/1000 (6.4%)');
+  });
+
+  test('should replace bare placeholder {percent} with shortest-reset-window percent', () => {
+    const now = Date.now();
+    const data = {
+      provider: 'glm',
+      quotas: [
+        {
+          window: '5h', percent: 6.4, used: 64, total: 1000,
+          remaining: 936, reset_display: '4h15m',
+          reset_timestamp: now + 4.5 * 60 * 60 * 1000
+        },
+        {
+          window: 'weekly', percent: 15, used: 7500, total: 50000,
+          remaining: 42500, reset_display: '5d',
+          reset_timestamp: now + 5 * 24 * 60 * 60 * 1000
+        }
+      ]
+    };
+
+    const result = applyTemplate('{percent}%', data);
+    expect(result).toBe('6.4%');
+  });
+
+  test('should replace bare {total}, {used}, {remaining} placeholders', () => {
+    const now = Date.now();
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h', percent: 6.4, used: 64, total: 1000,
+        remaining: 936, reset_display: '4h15m',
+        reset_timestamp: now + 4.5 * 60 * 60 * 1000
+      }]
+    };
+
+    const result = applyTemplate('{used}/{total} ({remaining} left)', data);
+    expect(result).toBe('64/1000 (936 left)');
+  });
+
+  test('should replace bare {reset} placeholder with reset_display from shortest window', () => {
+    const now = Date.now();
+    const data = {
+      provider: 'glm',
+      quotas: [{
+        window: '5h', percent: 6.4, used: 64, total: 1000,
+        remaining: 936, reset_display: '4h15m',
+        reset_timestamp: now + 4.5 * 60 * 60 * 1000
+      }]
+    };
+
+    const result = applyTemplate('resets in {reset}', data);
+    expect(result).toBe('resets in 4h15m');
   });
 });
 
