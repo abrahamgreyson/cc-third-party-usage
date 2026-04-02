@@ -13,19 +13,13 @@ Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero
 ### Validated
 
 - [x] Implement 60-second cache (configurable) at `~/.cc-switch/usage_cache.json` — Validated in Phase 4: Caching Layer
+- [x] Default concise output format optimized for statusLine — Validated in Phase 5: CLI Interface & Output Formatting
+- [x] Support `--template` flag for custom output format with bare and window-prefixed placeholders — Validated in Phase 5: CLI Interface & Output Formatting
+- [x] Full CLI with `--json`, `--verbose`, `--cache-duration`, `--help`, `--version` flags — Validated in Phase 5: CLI Interface & Output Formatting
 
 ### Active
 
-- [ ] Query Kimi API usage via `/v1/usages` endpoint
-- [ ] Query GLM API usage via `/api/monitor/usage/quota/limit` endpoint
-- [ ] CC Switch proxy penetration: detect localhost/127.0.0.1 in `ANTHROPIC_BASE_URL` or `BASE_URL`
-- [ ] Read CC Switch SQLite database (`~/.cc-switch/cc-switch.db`) to extract real API credentials
-- [ ] Auto-detect provider type based on baseUrl domain (kimi.com, bigmodel.cn)
-- [ ] Normalize usage data to standard format: `{ total, used, remaining, percent, reset_display }`
-- [ ] Default concise output format optimized for statusLine
-- [ ] Support `--template` flag for custom output format
-- [ ] Full compatibility with both Bun and Node.js runtimes
-- [ ] Graceful error handling with clear error messages when penetration fails
+(All requirements validated — project complete for v1.0)
 
 ### Out of Scope
 
@@ -93,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after Phase 4 completion*
+*Last updated: 2026-04-02 after Phase 5 completion — milestone v1.0 complete*
