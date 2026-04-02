@@ -278,26 +278,33 @@ describe('writeCache', () => {
 // ============================================================
 describe('getCachedUsageData', () => {
   test('should return cached data when cache is valid (cache hit)', async () => {
-    // Write a valid cache file for 'kimi' provider
+    // Write a valid cache file for 'kimi' provider in nested format
     const provider = 'kimi';
     const cachedData = {
       timestamp: Date.now(),
       provider: 'kimi',
-      total: 500,
-      used: 200,
-      remaining: 300,
-      percent: 40,
-      reset_display: '45\u5206\u949f'
+      quotas: [{
+        window: 'overall',
+        type: 'usage',
+        total: 500,
+        used: 200,
+        remaining: 300,
+        percent: 40,
+        reset_display: '45分钟',
+        reset_timestamp: null
+      }],
+      fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
-      const result = await getCachedUsageData(DEFAULT_CONFIG.cacheDuration, provider);
-      expect(result).not.toBeNull();
-      expect(result.total).toBe(500);
-      expect(result.used).toBe(200);
-      expect(result.provider).toBe('kimi');
+      const { data, diagnostics } = await getCachedUsageData(DEFAULT_CONFIG.cacheDuration, provider);
+      expect(data).not.toBeNull();
+      expect(data.provider).toBe('kimi');
+      expect(data.quotas[0].total).toBe(500);
+      expect(data.quotas[0].used).toBe(200);
+      expect(diagnostics.cacheStatus).toBe('HIT');
     } finally {
       try { await unlink(cachePath); } catch {}
     }
@@ -357,19 +364,26 @@ describe('getCachedUsageData', () => {
     const cachedData = {
       timestamp: Date.now() - 30000, // 30 seconds ago
       provider: 'kimi',
-      total: 100,
-      used: 50,
-      remaining: 50,
-      percent: 50,
-      reset_display: '30\u5206\u949f'
+      quotas: [{
+        window: 'overall',
+        type: 'usage',
+        total: 100,
+        used: 50,
+        remaining: 50,
+        percent: 50,
+        reset_display: '30分钟',
+        reset_timestamp: null
+      }],
+      fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
-      const result = await getCachedUsageData(undefined, provider);
-      expect(result).not.toBeNull();
-      expect(result.total).toBe(100);
+      const { data, diagnostics } = await getCachedUsageData(undefined, provider);
+      expect(data).not.toBeNull();
+      expect(data.quotas[0].total).toBe(100);
+      expect(diagnostics.cacheStatus).toBe('HIT');
     } finally {
       try { await unlink(cachePath); } catch {}
     }
@@ -380,47 +394,59 @@ describe('getCachedUsageData', () => {
     const cachedData = {
       timestamp: Date.now() - 30000, // 30 seconds ago
       provider: 'kimi',
-      total: 100,
-      used: 50,
-      remaining: 50,
-      percent: 50,
-      reset_display: '30\u5206\u949f'
+      quotas: [{
+        window: 'overall',
+        type: 'usage',
+        total: 100,
+        used: 50,
+        remaining: 50,
+        percent: 50,
+        reset_display: '30分钟',
+        reset_timestamp: null
+      }],
+      fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
       // With 120s TTL, 30s old cache should be valid
-      const result = await getCachedUsageData(120, provider);
-      expect(result).not.toBeNull();
-      expect(result.total).toBe(100);
+      const { data, diagnostics } = await getCachedUsageData(120, provider);
+      expect(data).not.toBeNull();
+      expect(data.quotas[0].total).toBe(100);
+      expect(diagnostics.cacheStatus).toBe('HIT');
     } finally {
       try { await unlink(cachePath); } catch {}
     }
   });
 
-  test('should return data with correct structure: { total, used, remaining, percent, reset_display, provider }', async () => {
+  test('should return data with correct structure: { provider, quotas, fetchedAt } plus diagnostics', async () => {
     const provider = 'kimi';
     const cachedData = {
       timestamp: Date.now(),
       provider: 'kimi',
-      total: 1000,
-      used: 250,
-      remaining: 750,
-      percent: 25,
-      reset_display: '1\u5c0f\u65f615\u5206\u949f'
+      quotas: [{
+        window: 'overall',
+        type: 'usage',
+        total: 1000,
+        used: 250,
+        remaining: 750,
+        percent: 25,
+        reset_display: '1小时15分钟',
+        reset_timestamp: null
+      }],
+      fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
-      const result = await getCachedUsageData(DEFAULT_CONFIG.cacheDuration, provider);
-      expect(result).toHaveProperty('total');
-      expect(result).toHaveProperty('used');
-      expect(result).toHaveProperty('remaining');
-      expect(result).toHaveProperty('percent');
-      expect(result).toHaveProperty('reset_display');
-      expect(result).toHaveProperty('provider');
+      const { data, diagnostics } = await getCachedUsageData(DEFAULT_CONFIG.cacheDuration, provider);
+      expect(data).toHaveProperty('provider');
+      expect(data).toHaveProperty('quotas');
+      expect(data).toHaveProperty('fetchedAt');
+      expect(diagnostics).toHaveProperty('cacheStatus');
+      expect(diagnostics).toHaveProperty('cachePath');
     } finally {
       try { await unlink(cachePath); } catch {}
     }

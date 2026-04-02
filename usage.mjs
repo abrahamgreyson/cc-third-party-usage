@@ -955,39 +955,46 @@ function calculatePercentage(used, total) {
 
 /**
  * Normalize raw usage data to standard format.
- * Per D-09: Output structure { total, used, remaining, percent, reset_display, provider }.
- * Per NORM-01: Standardized format for all providers.
- * @param {{ used: number, total: number, reset: string|number }} rawData - Raw data from parser
+ * Accepts { quotas: [...] } from parsers and returns nested structure.
+ * For each quota, calculates missing fields (percent, remaining, reset_display).
+ * @param {{ quotas: Array }} rawData - Raw data from parser with quotas array
  * @param {'kimi'|'glm'} provider - Provider type
- * @returns {{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }}
+ * @returns {{ provider: string, quotas: Array, fetchedAt: string }}
  */
 function normalizeUsageData(rawData, provider) {
-  const { used, total, reset } = rawData;
+  const { quotas: rawQuotas = [] } = rawData;
 
-  // Calculate percentage per D-08, NORM-02
-  const percent = calculatePercentage(used, total);
+  // Enrich each quota entry with calculated fields
+  const quotas = rawQuotas.map(q => {
+    const total = q.total || 0;
+    const used = q.used || 0;
+    const remaining = q.remaining != null ? q.remaining : total - used;
+    const percent = q.percent != null ? q.percent : (total > 0 ? Math.round((used / total) * 10000) / 100 : 0);
+    const reset_display = q.reset_display || (q.reset_timestamp ? normalizeResetTime(q.reset_timestamp) : '');
 
-  // Calculate remaining
-  const remaining = total - used;
+    return {
+      window: q.window,
+      type: q.type,
+      total,
+      used,
+      remaining,
+      percent,
+      reset_display,
+      reset_timestamp: q.reset_timestamp || null
+    };
+  });
 
-  // Convert reset time per D-07, NORM-03, NORM-04
-  const reset_display = normalizeResetTime(reset);
-
-  // Standard output structure per D-09, NORM-01
   return {
-    total,
-    used,
-    remaining,
-    percent,
-    reset_display,
-    provider
+    provider,
+    quotas,
+    fetchedAt: new Date().toISOString()
   };
 }
 
 /**
  * Get normalized usage data from provider API.
  * Main entry point that orchestrates: query -> parse -> normalize.
- * @returns {Promise<{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }>}
+ * @returns {Promise<{ provider: string, quotas: Array, fetchedAt: string }>}
  * @throws {ConfigError|NetworkError|APIError} On any failure in the pipeline
  */
 async function getUsageData() {
@@ -1016,10 +1023,10 @@ async function getUsageData() {
 /**
  * Parse Kimi API response and extract raw usage data.
  * Per D-04: Independent parser for Kimi-specific format.
- * Per D-05: Direct field access to response.limits[0].
  * Per D-06: Strict validation with APIError on failure.
+ * Captures ALL quota windows: usage field as 'overall' + all limits[] entries.
  * @param {object} response - Raw API response from Kimi
- * @returns {{ used: number, total: number, reset: string }} Raw usage data (reset is ISO string)
+ * @returns {{ quotas: Array<{ window, type, total, used, remaining, percent, reset_display, reset_timestamp }> }}
  * @throws {APIError} If response format is invalid
  */
 function parseKimiResponse(response) {
@@ -1031,59 +1038,78 @@ function parseKimiResponse(response) {
     );
   }
 
-  // Per D-05: Kimi uses response.limits[0]
+  const quotas = [];
+
+  // Parse response.usage as 'overall' quota window (Kimi values are STRINGS)
+  if (response.usage && typeof response.usage === 'object') {
+    const u = response.usage;
+    const total = parseInt(u.limit, 10);
+    const remaining = parseInt(u.remaining, 10);
+    const used = total - remaining;
+
+    quotas.push({
+      window: 'overall',
+      type: 'usage',
+      total,
+      used,
+      remaining,
+      percent: total > 0 ? Math.round((used / total) * 10000) / 100 : 0,
+      reset_display: u.resetTime ? normalizeResetTime(u.resetTime) : '',
+      reset_timestamp: u.resetTime || null
+    });
+  }
+
+  // Parse all entries in response.limits[] as windowed quotas
   if (!response.limits || !Array.isArray(response.limits)) {
     throw new APIError(
       'Invalid Kimi API response: missing or malformed limits array. ' +
-      'Expected { usage: [...], limits: [...] } structure.'
+      'Expected { usage: {...}, limits: [...] } structure.'
     );
   }
 
-  const quota = response.limits[0];
-  if (!quota) {
+  for (const limit of response.limits) {
+    if (!limit || !limit.window || !limit.detail) continue;
+
+    // Window label from duration in minutes (e.g., 300 min => "5h")
+    const durationMin = limit.window.duration || 0;
+    const hours = durationMin / 60;
+    const windowLabel = hours >= 1 ? `${hours}h` : `${durationMin}m`;
+
+    const d = limit.detail;
+    const total = parseInt(d.limit, 10);
+    const remaining = parseInt(d.remaining, 10);
+    const used = total - remaining;
+
+    quotas.push({
+      window: windowLabel,
+      type: 'limit',
+      total,
+      used,
+      remaining,
+      percent: total > 0 ? Math.round((used / total) * 10000) / 100 : 0,
+      reset_display: d.resetTime ? normalizeResetTime(d.resetTime) : '',
+      reset_timestamp: d.resetTime || null
+    });
+  }
+
+  if (quotas.length === 0) {
     throw new APIError(
-      'Invalid Kimi API response: limits array is empty. ' +
-      'Expected at least one quota entry.'
+      'Invalid Kimi API response: no usable quota data found. ' +
+      'Expected { usage: {...}, limits: [...] } structure with data.'
     );
   }
 
-  // Validate required fields
-  if (typeof quota.used !== 'number') {
-    throw new APIError(
-      `Invalid Kimi quota data: 'used' must be a number. ` +
-      `Got ${quota.used === undefined ? 'undefined' : typeof quota.used}.`
-    );
-  }
-
-  if (typeof quota.total !== 'number') {
-    throw new APIError(
-      `Invalid Kimi quota data: 'total' must be a number. ` +
-      `Got ${quota.total === undefined ? 'undefined' : typeof quota.total}.`
-    );
-  }
-
-  if (!quota.reset) {
-    throw new APIError(
-      'Invalid Kimi quota data: missing reset field. ' +
-      'Expected ISO 8601 timestamp string.'
-    );
-  }
-
-  // Return raw data for normalization
-  return {
-    used: quota.used,
-    total: quota.total,
-    reset: quota.reset // ISO string format per API-03
-  };
+  return { quotas };
 }
 
 /**
  * Parse GLM API response and extract raw usage data.
  * Per D-04: Independent parser for GLM-specific format.
- * Per D-05: Direct field access to response.data.limits with TIME_LIMIT type.
  * Per D-06: Strict validation with APIError on failure.
+ * Captures ALL entries in response.data.limits[] (not just TIME_LIMIT).
+ * Per D-01: TIME_LIMIT unit=5,number=1 => "5h", TOKENS_LIMIT unit=3,number=5 => "weekly".
  * @param {object} response - Raw API response from GLM
- * @returns {{ used: number, total: number, reset: number }} Raw usage data (reset is Unix timestamp in seconds)
+ * @returns {{ quotas: Array<{ window, type, total, used, remaining, percent, reset_display, reset_timestamp }> }}
  * @throws {APIError} If response format is invalid
  */
 function parseGLMResponse(response) {
@@ -1110,43 +1136,48 @@ function parseGLMResponse(response) {
     );
   }
 
-  // Per API-04: Find TIME_LIMIT entry
-  const quota = response.data.limits.find(limit => limit.type === 'TIME_LIMIT');
-  if (!quota) {
+  const quotas = [];
+
+  for (const limit of response.data.limits) {
+    if (!limit || !limit.type) continue;
+
+    // Derive window label from type + unit/number
+    let windowLabel;
+    if (limit.type === 'TIME_LIMIT' && limit.unit === 5 && limit.number === 1) {
+      windowLabel = '5h';
+    } else if (limit.type === 'TOKENS_LIMIT' && limit.unit === 3 && limit.number === 5) {
+      windowLabel = 'weekly';
+    } else {
+      // Generic label for other combinations
+      windowLabel = `${limit.type}_${limit.unit || 0}_${limit.number || 0}`;
+    }
+
+    // GLM fields: usage -> total, currentValue -> used, remaining, percentage, nextResetTime
+    const total = limit.usage || 0;
+    const used = limit.currentValue || 0;
+    const remaining = limit.remaining || (total - used);
+    const percent = limit.percentage != null ? limit.percentage : (total > 0 ? Math.round((used / total) * 10000) / 100 : 0);
+
+    quotas.push({
+      window: windowLabel,
+      type: limit.type,
+      total,
+      used,
+      remaining,
+      percent,
+      reset_display: limit.nextResetTime ? normalizeResetTime(limit.nextResetTime) : '',
+      reset_timestamp: limit.nextResetTime || null
+    });
+  }
+
+  if (quotas.length === 0) {
     throw new APIError(
-      'Invalid GLM API response: no TIME_LIMIT entry found in limits array. ' +
-      'Expected at least one entry with type="TIME_LIMIT".'
+      'Invalid GLM API response: no usable limit entries found in limits array. ' +
+      'Expected at least one entry with valid type.'
     );
   }
 
-  // Validate required fields
-  if (typeof quota.used !== 'number') {
-    throw new APIError(
-      `Invalid GLM quota data: 'used' must be a number. ` +
-      `Got ${quota.used === undefined ? 'undefined' : typeof quota.used}.`
-    );
-  }
-
-  if (typeof quota.total !== 'number') {
-    throw new APIError(
-      `Invalid GLM quota data: 'total' must be a number. ` +
-      `Got ${quota.total === undefined ? 'undefined' : typeof quota.total}.`
-    );
-  }
-
-  if (!quota.reset) {
-    throw new APIError(
-      'Invalid GLM quota data: missing reset field. ' +
-      'Expected Unix timestamp number.'
-    );
-  }
-
-  // Return raw data for normalization
-  return {
-    used: quota.used,
-    total: quota.total,
-    reset: quota.reset // Unix timestamp per API-04
-  };
+  return { quotas };
 }
 
 ///// Caching Layer /////
@@ -1222,38 +1253,62 @@ async function writeCache(filePath, data) {
  * Get usage data with cache-first strategy.
  * Per D-06: Blocking refresh -- wait for API when cache miss.
  * Per D-10: Cache-first flow: read cache -> return if valid -> API call -> write cache -> return data.
- * Per D-02: Cache structure { timestamp, provider, total, used, remaining, percent, reset_display }.
+ * Returns nested { provider, quotas: [...], fetchedAt } structure.
+ * Returns { data, diagnostics } with diagnostic metadata for verbose output.
  * @param {number} [cacheDuration=DEFAULT_CONFIG.cacheDuration] - Cache TTL in seconds
  * @param {string} [provider=null] - Provider name for cache lookup (optional)
- * @returns {Promise<{ total: number, used: number, remaining: number, percent: number, reset_display: string, provider: string }>}
+ * @returns {Promise<{ data: { provider: string, quotas: Array, fetchedAt: string }, diagnostics: { cacheStatus: string, cachePath: string|null, cacheTtlRemaining: number|null, apiDuration: number|null, apiRetries: number|null, apiUrl: string|null, providerSource: string } }>}
  */
 async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, provider = null) {
   const maxAgeMs = cacheDuration * 1000;
+  const diagnostics = {
+    cacheStatus: 'MISS',
+    cachePath: null,
+    cacheTtlRemaining: null,
+    apiDuration: null,
+    apiRetries: null,
+    apiUrl: null,
+    providerSource: provider || 'unknown'
+  };
 
   // Step 1: Try cache read if provider is known
   if (provider) {
     const filePath = getCacheFilePath(provider);
+    diagnostics.cachePath = filePath;
     const cached = await readCache(filePath, maxAgeMs);
-    if (cached) return cached;
+    if (cached) {
+      diagnostics.cacheStatus = 'HIT';
+      diagnostics.cacheTtlRemaining = maxAgeMs - (Date.now() - cached.timestamp);
+      diagnostics.providerSource = cached.provider || provider;
+
+      // Return cached data in nested format
+      const data = {
+        provider: cached.provider,
+        quotas: cached.quotas || [],
+        fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
+      };
+      return { data, diagnostics };
+    }
   }
 
   // Step 2: Cache miss or unknown provider -- fetch from API
+  const apiStart = Date.now();
   const data = await getUsageData();
+  diagnostics.apiDuration = Date.now() - apiStart;
+  diagnostics.providerSource = data.provider || provider || 'unknown';
 
-  // Step 3: Write to cache using provider from response
+  // Step 3: Write to cache using provider from response (nested format)
   const filePath = getCacheFilePath(data.provider);
+  diagnostics.cachePath = filePath;
   writeCache(filePath, {
     timestamp: Date.now(),
     provider: data.provider,
-    total: data.total,
-    used: data.used,
-    remaining: data.remaining,
-    percent: data.percent,
-    reset_display: data.reset_display
+    quotas: data.quotas,
+    fetchedAt: data.fetchedAt
   }); // Fire-and-forget per D-10
 
-  // Step 4: Return data
-  return data;
+  // Step 4: Return data with diagnostics
+  return { data, diagnostics };
 }
 
 ///// CLI Interface /////

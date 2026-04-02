@@ -12,7 +12,7 @@ Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Implement 60-second cache (configurable) at `~/.cc-switch/usage_cache.json` — Validated in Phase 4: Caching Layer
 
 ### Active
 
@@ -22,7 +22,6 @@ Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero
 - [ ] Read CC Switch SQLite database (`~/.cc-switch/cc-switch.db`) to extract real API credentials
 - [ ] Auto-detect provider type based on baseUrl domain (kimi.com, bigmodel.cn)
 - [ ] Normalize usage data to standard format: `{ total, used, remaining, percent, reset_display }`
-- [ ] Implement 60-second cache (configurable) at `~/.cc-switch/usage_cache.json`
 - [ ] Default concise output format optimized for statusLine
 - [ ] Support `--template` flag for custom output format
 - [ ] Full compatibility with both Bun and Node.js runtimes
@@ -94,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after initialization*
+*Last updated: 2026-04-02 after Phase 4 completion*
