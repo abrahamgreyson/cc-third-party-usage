@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-04-02T02:58:32.129Z"
+status: executing
+last_updated: "2026-04-02T05:08:19.440Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_plans: 16
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State: cc-third-party-usage
 
-**Last Updated:** 2026-04-01
-**Phase:** 4
-**Status:** Phase complete — ready for verification
+**Last Updated:** 2026-04-02
+**Phase:** 5
+**Status:** Executing Phase 05 - Plan 00 complete
 
 ## Project Reference
 
 **Core Value:** Seamlessly surface AI API usage data even when behind CC Switch proxy, with zero-configuration auto-detection and cache-optimized for frequent status bar refreshes.
 
-**Current Focus:** Phase 04 — caching-layer
+**Current Focus:** Phase 05 — cli-interface-output-formatting
 
 **Key Constraints:**
 
@@ -33,14 +33,14 @@ progress:
 
 ## Current Position
 
-Phase: 04 (caching-layer) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 05 (cli-interface-output-formatting) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 **Phase:** 1 - Core Infrastructure
 **Status:** ✅ COMPLETED - All 4 waves finished
 **Progress:**
 
-[██████████] 100%
+[█████████░] 88%
 [████████████████████] 100% - Core Infrastructure Complete
 
 ```
@@ -96,6 +96,7 @@ Status: Phase complete — ready for verification
 | Phase 03 P02 | 2 minutes | 2 tasks | 2 files |
 | Phase 04 P00 | 2min | 1 tasks | 1 files |
 | Phase 04 P01 | 6min | 1 tasks | 2 files |
+| Phase 05 P00 | 2min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Status: Phase complete — ready for verification
 | Exponential backoff: 1s, 2s, 4s | User decision from discussion - balances responsiveness with API load | 2026-04-01 |
 | No retry on 4xx client errors | User decision - client errors require code fixes, not retries | 2026-04-01 |
 | WAL mode + 10s busy timeout | Enables concurrent read/write without SQLITE_BUSY errors | 2026-04-01 |
+| Commander.js 14.0.3 as sole external dependency | Minimal, zero sub-dependencies, widely adopted CLI parser per CLAUDE.md recommendation | 2026-04-02 |
+| Dynamic try/catch import for test stubs | Consistent with Phase 04 pattern -- allows test file to load even when functions not yet exported | 2026-04-02 |
 
 ### Active TODOs
 
@@ -121,6 +124,13 @@ Status: Phase complete — ready for verification
 (None)
 
 ### Session Notes
+
+**2026-04-02 - Phase 05 Plan 00 Complete**
+
+- Installed Commander.js 14.0.3 (first and only external dependency)
+- Created 23 test.todo() stubs across 7 describe blocks in tests/05-cli-interface.test.js
+- Covers all 12 Phase 05 requirements (OUT-01~05, CLI-01~07)
+- Ready for Plan 01: parser backport + compact time formatter + data pipeline update
 
 **2026-04-02 - Phase 04 Context Gathered**
 

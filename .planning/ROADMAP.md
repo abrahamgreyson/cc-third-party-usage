@@ -48,13 +48,13 @@ This roadmap delivers a high-performance single-file CLI tool that monitors AI A
 2. user's provider type (Kimi or GLM) is correctly detected from baseUrl domain without manual specification
 3. user without proxy has credentials read from environment variables as fallback
 4. user sees clear error message when CC Switch database is unreadable or credentials cannot be extracted
-5. tool routes to correct API endpoint based on detected provider (kimi.com → Kimi API, bigmodel.cn → GLM API)
+5. tool routes to correct API endpoint based on detected provider (kimi.com -> Kimi API, bigmodel.cn -> GLM API)
 
 **Plans:** 3 plans in 3 waves
 plans:
-- [x] 02-00-PLAN.md — Wave 0: test infrastructure (4 test files, mock DB helper)
-- [x] 02-01-PLAN.md — Wave 1: proxy detection + provider detection
-- [x] 02-02-PLAN.md — Wave 2: credential extraction + unified resolution
+- [x] 02-00-PLAN.md -- Wave 0: test infrastructure (4 test files, mock DB helper)
+- [x] 02-01-PLAN.md -- Wave 1: proxy detection + provider detection
+- [x] 02-02-PLAN.md -- Wave 2: credential extraction + unified resolution
 
 ### Phase 3: API Integration & Data Normalization
 
@@ -73,10 +73,10 @@ plans:
 
 **Plans:** 4 plans in 3 waves
 plans:
-- [x] 03-00-PLAN.md — Wave 0: test infrastructure (test stubs for mock API fixtures)
-- [ ] 03-01-PLAN.md — Wave 1: API request infrastructure (URL builder, query functions)
-- [x] 03-02-PLAN.md — Wave 1: Response parsers (Kimi parser, GLM parser)
-- [ ] 03-03-PLAN.md — Wave 2: Data normalization (timestamp conversion, percentage, unified format)
+- [x] 03-00-PLAN.md -- Wave 0: test infrastructure (test stubs for mock API fixtures)
+- [ ] 03-01-PLAN.md -- Wave 1: API request infrastructure (URL builder, query functions)
+- [x] 03-02-PLAN.md -- Wave 1: Response parsers (Kimi parser, GLM parser)
+- [ ] 03-03-PLAN.md -- Wave 2: Data normalization (timestamp conversion, percentage, unified format)
 
 ### Phase 4: caching Layer
 **Goal:** users experience fast statusLine refreshes without API rate limit concerns thanks to intelligent cache-first data fetching strategy.
@@ -94,8 +94,8 @@ plans:
 
 **Plans:** 2 plans in 2 waves
 Plans:
-- [x] 04-00-PLAN.md — Wave 0: test infrastructure (test stubs for CACHE-01~05)
-- [x] 04-01-PLAN.md — Wave 1: cache core functions (getCacheFilePath, readCache, writeCache, getCachedUsageData)
+- [x] 04-00-PLAN.md -- Wave 0: test infrastructure (test stubs for CACHE-01~05)
+- [x] 04-01-PLAN.md -- Wave 1: cache core functions (getCacheFilePath, readCache, writeCache, getCachedUsageData)
 
 ### Phase 5: CLI Interface & Output Formatting
 **Goal:** users have flexible output options optimized for statusLine integration while supporting custom templates and machine-readable formats.
@@ -112,7 +112,11 @@ Plans:
 6. user sees version information with `--version` or -v` flag
 7. all output goes to stdout, all errors go to stderr (proper CLI conventions)
 
-**Plans:** TBD
+**Plans:** 3 plans in 3 waves
+Plans:
+- [x] 05-00-PLAN.md -- Wave 0: test infrastructure + Commander.js install
+- [ ] 05-01-PLAN.md -- Wave 1: parser backport + compact time formatter + data pipeline update
+- [ ] 05-02-PLAN.md -- Wave 2: output formatters + CLI entry point
 
 ## Progress
 | Phase | Plans Complete | Status | Completed |
@@ -121,10 +125,10 @@ Plans:
 | 2. proxy penetration & provider detection | 3/3 | Completed | 2026-04-01 |
 | 3. api integration & data normalization | 0/4 | Ready for execution | - |
 | 4. caching layer | 0/2 | Planned | - |
-| 5. cli interface & output formatting | 0/1 | Not started | - |
+| 5. cli interface & output formatting | 0/3 | Planned | - |
 
 ## Notes
-- **Phase ordering rationale:** infrastructure → service logic → API integration → caching → user interface
+- **Phase ordering rationale:** infrastructure -> service logic -> API integration -> caching -> user interface
 - **Cross-runtime testing:** Phase 1 establishes testing in each Bun and Node.js from day one
 - **Concurrent access:** WAL mode and atomic cache writes prevent concurrency issues
 - **Research flags:** Phase 2 (CC Switch schema exploration) and Phase 3 (API response validation) need deeper research during planning

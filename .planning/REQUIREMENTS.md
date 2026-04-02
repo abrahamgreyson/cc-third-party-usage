@@ -51,21 +51,21 @@
 
 ### Output Formatting
 
-- [ ] **OUT-01**: Default concise output format optimized for statusLine display
-- [ ] **OUT-02**: Support `--json` flag for JSON output (machine-readable)
-- [ ] **OUT-03**: Support `--template` flag for custom output format with placeholders
-- [ ] **OUT-04**: Template placeholders: `{total}`, `{used}`, `{remaining}`, `{percent}`, `{reset}`, `{provider}`
-- [ ] **OUT-05**: All output to stdout, errors to stderr (proper CLI conventions)
+- [x] **OUT-01**: Default concise output format optimized for statusLine display
+- [x] **OUT-02**: Support `--json` flag for JSON output (machine-readable)
+- [x] **OUT-03**: Support `--template` flag for custom output format with placeholders
+- [x] **OUT-04**: Template placeholders: `{total}`, `{used}`, `{remaining}`, `{percent}`, `{reset}`, `{provider}`
+- [x] **OUT-05**: All output to stdout, errors to stderr (proper CLI conventions)
 
 ### CLI Interface
 
-- [ ] **CLI-01**: Zero-configuration: auto-detect everything by default
-- [ ] **CLI-02**: Support `--cache-duration <seconds>` flag to customize cache TTL
-- [ ] **CLI-03**: Support `--template <string>` flag for custom output
-- [ ] **CLI-04**: Support `--json` flag for JSON output
-- [ ] **CLI-05**: Support `--verbose` flag for debugging (show cache hits, API calls, etc.)
-- [ ] **CLI-06**: Display help with `--help` or `-h`
-- [ ] **CLI-07**: Display version with `--version` or `-v`
+- [x] **CLI-01**: Zero-configuration: auto-detect everything by default
+- [x] **CLI-02**: Support `--cache-duration <seconds>` flag to customize cache TTL
+- [x] **CLI-03**: Support `--template <string>` flag for custom output
+- [x] **CLI-04**: Support `--json` flag for JSON output
+- [x] **CLI-05**: Support `--verbose` flag for debugging (show cache hits, API calls, etc.)
+- [x] **CLI-06**: Display help with `--help` or `-h`
+- [x] **CLI-07**: Display version with `--version` or `-v`
 
 ### Database Integration
 
@@ -157,18 +157,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CACHE-03 | Phase 4 | Complete |
 | CACHE-04 | Phase 4 | Complete |
 | CACHE-05 | Phase 4 | Complete |
-| OUT-01 | Phase 5 | Pending |
-| OUT-02 | Phase 5 | Pending |
-| OUT-03 | Phase 5 | Pending |
-| OUT-04 | Phase 5 | Pending |
-| OUT-05 | Phase 5 | Pending |
-| CLI-01 | Phase 5 | Pending |
-| CLI-02 | Phase 5 | Pending |
-| CLI-03 | Phase 5 | Pending |
-| CLI-04 | Phase 5 | Pending |
-| CLI-05 | Phase 5 | Pending |
-| CLI-06 | Phase 5 | Pending |
-| CLI-07 | Phase 5 | Pending |
+| OUT-01 | Phase 5 | Complete |
+| OUT-02 | Phase 5 | Complete |
+| OUT-03 | Phase 5 | Complete |
+| OUT-04 | Phase 5 | Complete |
+| OUT-05 | Phase 5 | Complete |
+| CLI-01 | Phase 5 | Complete |
+| CLI-02 | Phase 5 | Complete |
+| CLI-03 | Phase 5 | Complete |
+| CLI-04 | Phase 5 | Complete |
+| CLI-05 | Phase 5 | Complete |
+| CLI-06 | Phase 5 | Complete |
+| CLI-07 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 47 total
