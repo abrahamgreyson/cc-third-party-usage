@@ -1,3 +1,10 @@
+# Source (published as bundled dist/usage.js)
+usage.mjs
+CLAUDE.md
+
+# Build artifacts
+dist/usage.js.map
+
 # Tests
 test/
 tests/
@@ -8,6 +15,7 @@ tests/
 .planning/
 .git/
 .gitignore
+.claude/
 
 # IDE
 .vscode/
@@ -26,6 +34,3 @@ npm-debug.log*
 # Environment
 .env
 .env.*
-
-# Claude Code
-.claude/

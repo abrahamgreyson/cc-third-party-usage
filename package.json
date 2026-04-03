@@ -1,15 +1,17 @@
 {
   "name": "cc-third-party-usage",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection",
   "type": "module",
-  "main": "usage.mjs",
+  "main": "dist/usage.js",
   "bin": {
-    "cc-usage": "usage.mjs"
+    "cc-usage": "dist/usage.js"
   },
   "scripts": {
+    "build": "rm -rf dist/* && bun build usage.mjs --target=node --outfile=dist/usage.js --target-version=22",
+    "start": "bun usage.mjs",
     "test": "bun test",
-    "start": "bun usage.mjs"
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "claude-code",
@@ -39,12 +41,9 @@
     "node": ">=22.5.0"
   },
   "files": [
-    "usage.mjs",
+    "dist/usage.js",
     "package.json",
     "README.md",
     "LICENSE"
-  ],
-  "dependencies": {
-    "commander": "^14.0.3"
-  }
+  ]
 }

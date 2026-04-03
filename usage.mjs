@@ -1,11 +1,75 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
-
 ///// Metadata /////
 
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
+
+///// CLI Argument Parser (zero-dependency) /////
+
+/**
+ * Parse CLI arguments without external dependencies.
+ * Supports: --json, --template <str>, --verbose, --cache-duration <n>, --version, --help
+ * @param {string[]} argv - process.argv (or similar)
+ * @returns {{ json: boolean, template: string|null, verbose: boolean, cacheDuration: number, showVersion: boolean, showHelp: boolean }}
+ */
+function parseArgs(argv) {
+  const args = argv.slice(2); // skip node and script path
+  const options = {
+    json: false,
+    template: null,
+    verbose: false,
+    cacheDuration: 60,
+    showVersion: false,
+    showHelp: false,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    switch (arg) {
+      case '-j':
+      case '--json':
+        options.json = true;
+        break;
+      case '-t':
+      case '--template':
+        options.template = args[++i] || null;
+        break;
+      case '--verbose':
+        options.verbose = true;
+        break;
+      case '-c':
+      case '--cache-duration':
+        options.cacheDuration = parseInt(args[++i], 10) || 60;
+        break;
+      case '-v':
+      case '--version':
+        options.showVersion = true;
+        break;
+      case '-h':
+      case '--help':
+        options.showHelp = true;
+        break;
+    }
+  }
+
+  return options;
+}
+
+function printHelp() {
+  process.stdout.write(`Usage: cc-usage [options]
+
+${DESCRIPTION}
+
+Options:
+  -j, --json              output raw JSON
+  -t, --template <str>    custom output template
+  --verbose               show debug information
+  -c, --cache-duration <n>  cache TTL in seconds (default: 60)
+  -v, --version           output the current version
+  -h, --help              display help for command
+`);
+}
 
 ///// Constants & Configuration /////
 
@@ -469,6 +533,7 @@ async function fetchWithRetry(url, options = {}) {
 
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
+import { readFileSync } from 'fs';
 import { readFile as fsReadFile, writeFile as fsWriteFile, rename as fsRename, unlink as fsUnlink } from 'fs/promises';
 
 /**
@@ -1196,6 +1261,23 @@ function getCacheFilePath(provider) {
 }
 
 /**
+ * Read cache file synchronously (for instant stale-while-revalidate).
+ * Returns data with age info, or null if missing/unreadable.
+ * Uses sync read to avoid async I/O scheduling overhead in statusLine.
+ * @param {string} filePath - Path to cache file
+ * @returns {{data: object, ageMs: number}|null}
+ */
+function readCacheRawSync(filePath) {
+  try {
+    const content = readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(content);
+    return { data, ageMs: Date.now() - data.timestamp };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Read cache file and check TTL expiration.
  * Per D-05: Strict TTL -- expired cache returns null.
  * Per D-08: Fail-open -- any error returns null (never throws).
@@ -1204,19 +1286,10 @@ function getCacheFilePath(provider) {
  * @returns {Promise<object|null>} Cached data or null if expired/missing
  */
 async function readCache(filePath, maxAgeMs) {
-  try {
-    const content = await fsReadFile(filePath, 'utf-8');
-    const data = JSON.parse(content);
-
-    // Strict TTL check per D-05
-    if (Date.now() - data.timestamp > maxAgeMs) {
-      return null;
-    }
-
-    return data;
-  } catch {
-    return null; // Fail-open per D-08
-  }
+  const raw = await readCacheRaw(filePath);
+  if (!raw) return null;
+  if (raw.ageMs > maxAgeMs) return null;
+  return raw.data;
 }
 
 /**
@@ -1252,14 +1325,15 @@ async function writeCache(filePath, data) {
 }
 
 /**
- * Get usage data with cache-first strategy.
- * Per D-06: Blocking refresh -- wait for API when cache miss.
- * Per D-10: Cache-first flow: read cache -> return if valid -> API call -> write cache -> return data.
- * Returns nested { provider, quotas: [...], fetchedAt } structure.
- * Returns { data, diagnostics } with diagnostic metadata for verbose output.
+ * Get usage data with stale-while-revalidate cache strategy.
+ * - Cache HIT (fresh): return immediately
+ * - Cache STALE (expired but exists): return stale data, trigger background refresh
+ * - Cache MISS (no file): fetch from API (blocking), write cache, return
+ * This ensures statusLine always gets a response within milliseconds,
+ * even if the API is slow or the cache is expired.
  * @param {number} [cacheDuration=DEFAULT_CONFIG.cacheDuration] - Cache TTL in seconds
  * @param {string} [provider=null] - Provider name for cache lookup (optional)
- * @returns {Promise<{ data: { provider: string, quotas: Array, fetchedAt: string }, diagnostics: { cacheStatus: string, cachePath: string|null, cacheTtlRemaining: number|null, apiDuration: number|null, apiRetries: number|null, apiUrl: string|null, providerSource: string } }>}
+ * @returns {Promise<{ data: { provider: string, quotas: Array, fetchedAt: string }, diagnostics: object }>}
  */
 async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, provider = null) {
   const maxAgeMs = cacheDuration * 1000;
@@ -1273,44 +1347,113 @@ async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, 
     providerSource: provider || 'unknown'
   };
 
-  // Step 1: Try cache read if provider is known
-  if (provider) {
-    const filePath = getCacheFilePath(provider);
+  // Step 1: Try cache read (sync for instant response)
+  const cacheProvider = provider || detectProviderFromEnv();
+  if (cacheProvider) {
+    const filePath = getCacheFilePath(cacheProvider);
     diagnostics.cachePath = filePath;
-    const cached = await readCache(filePath, maxAgeMs);
-    if (cached) {
-      diagnostics.cacheStatus = 'HIT';
-      diagnostics.cacheTtlRemaining = maxAgeMs - (Date.now() - cached.timestamp);
-      diagnostics.providerSource = cached.provider || provider;
+    const raw = readCacheRawSync(filePath);
 
-      // Return cached data in nested format
-      const data = {
-        provider: cached.provider,
-        quotas: cached.quotas || [],
-        fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
-      };
-      return { data, diagnostics };
+    if (raw) {
+      if (raw.ageMs <= maxAgeMs) {
+        // Fresh cache - return immediately
+        diagnostics.cacheStatus = 'HIT';
+        diagnostics.cacheTtlRemaining = Math.round((maxAgeMs - raw.ageMs) / 1000);
+        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        const data = {
+          provider: raw.data.provider,
+          quotas: raw.data.quotas || [],
+          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+        };
+        return { data, diagnostics };
+      } else {
+        // Stale cache - return stale data, trigger background refresh
+        diagnostics.cacheStatus = 'STALE';
+        diagnostics.cacheTtlRemaining = 0;
+        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        const data = {
+          provider: raw.data.provider,
+          quotas: raw.data.quotas || [],
+          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+        };
+        // Fire-and-forget background refresh
+        refreshCache(cacheProvider, filePath);
+        return { data, diagnostics };
+      }
     }
   }
 
-  // Step 2: Cache miss or unknown provider -- fetch from API
-  const apiStart = Date.now();
-  const data = await getUsageData();
-  diagnostics.apiDuration = Date.now() - apiStart;
-  diagnostics.providerSource = data.provider || provider || 'unknown';
+  // Step 2: No cache at all - must fetch from API (blocking)
+  try {
+    const apiStart = Date.now();
+    const data = await getUsageData();
+    diagnostics.apiDuration = Date.now() - apiStart;
+    diagnostics.providerSource = data.provider || provider || 'unknown';
 
-  // Step 3: Write to cache using provider from response (nested format)
-  const filePath = getCacheFilePath(data.provider);
-  diagnostics.cachePath = filePath;
-  writeCache(filePath, {
-    timestamp: Date.now(),
-    provider: data.provider,
-    quotas: data.quotas,
-    fetchedAt: data.fetchedAt
-  }); // Fire-and-forget per D-10
+    // Write to cache
+    const filePath = getCacheFilePath(data.provider);
+    diagnostics.cachePath = filePath;
+    writeCache(filePath, {
+      timestamp: Date.now(),
+      provider: data.provider,
+      quotas: data.quotas,
+      fetchedAt: data.fetchedAt
+    });
 
-  // Step 4: Return data with diagnostics
-  return { data, diagnostics };
+    return { data, diagnostics };
+  } catch (error) {
+    // API failed - check if any stale cache exists as last resort
+    if (cacheProvider) {
+      const filePath = getCacheFilePath(cacheProvider);
+      const raw = readCacheRawSync(filePath);
+      if (raw) {
+        diagnostics.cacheStatus = 'STALE_ERROR';
+        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        const data = {
+          provider: raw.data.provider,
+          quotas: raw.data.quotas || [],
+          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+        };
+        return { data, diagnostics };
+      }
+    }
+    throw error;
+  }
+}
+
+/**
+ * Detect provider from environment without throwing.
+ * Used for cache lookup when provider is unknown.
+ * @returns {string|null} 'kimi', 'glm', or null
+ */
+function detectProviderFromEnv() {
+  try {
+    const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.BASE_URL;
+    if (!baseUrl) return null;
+    return detectProvider(baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Background cache refresh - fire and forget.
+ * Fetches fresh data and writes to cache. Errors are silently ignored.
+ * @param {string} expectedProvider - Provider name for cache key
+ * @param {string} filePath - Cache file path to write
+ */
+async function refreshCache(expectedProvider, filePath) {
+  try {
+    const data = await getUsageData();
+    writeCache(filePath, {
+      timestamp: Date.now(),
+      provider: data.provider,
+      quotas: data.quotas,
+      fetchedAt: data.fetchedAt
+    });
+  } catch {
+    // Silently ignore background refresh errors
+  }
 }
 
 ///// CLI Interface /////
@@ -1436,41 +1579,38 @@ function outputVerboseInfo(diagnostics) {
 }
 
 /**
- * Main CLI entry point using Commander.js.
- * Per D-11: --json, --template, --verbose, --cache-duration, --version flags.
- * Per D-12: Dual-mode -- CLI when run directly, module when imported.
- * Per D-13: Data to stdout, errors/debug to stderr.
- * Per D-14: ExitOverride for testability.
+ * Main CLI entry point (zero-dependency).
  * @returns {Promise<void>}
  */
 async function runCLI() {
-  const program = new Command();
-  program
-    .name('usage.mjs')
-    .description(DESCRIPTION)
-    .version(`usage.mjs v${VERSION}`, '-v, --version', 'output the current version')
-    .option('-j, --json', 'output raw JSON')
-    .option('-t, --template <string>', 'custom output template')
-    .option('--verbose', 'show debug information')
-    .option('-c, --cache-duration <seconds>', 'cache TTL in seconds', parseInt, DEFAULT_CONFIG.cacheDuration)
-    .exitOverride()
-    .action(async (options) => {
-      const { data, diagnostics } = await getCachedUsageData(options.cacheDuration);
+  const options = parseArgs(process.argv);
 
-      if (options.verbose) {
-        outputVerboseInfo(diagnostics);
-      }
+  if (options.showHelp) {
+    printHelp();
+    process.exit(0);
+  }
 
-      if (options.json) {
-        process.stdout.write(JSON.stringify(data, null, 2) + '\n');
-      } else if (options.template) {
-        process.stdout.write(applyTemplate(options.template, data) + '\n');
-      } else {
-        process.stdout.write(formatDefaultOutput(data) + '\n');
-      }
-    });
+  if (options.showVersion) {
+    process.stdout.write(`cc-usage v${VERSION}\n`);
+    process.exit(0);
+  }
 
-  await program.parseAsync(process.argv);
+  const { data, diagnostics } = await getCachedUsageData(options.cacheDuration);
+
+  if (options.verbose) {
+    outputVerboseInfo(diagnostics);
+  }
+
+  if (options.json) {
+    process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+  } else if (options.template) {
+    process.stdout.write(applyTemplate(options.template, data) + '\n');
+  } else {
+    process.stdout.write(formatDefaultOutput(data) + '\n');
+  }
+
+  // Force exit to avoid waiting for background cache refresh
+  process.exit(0);
 }
 
 ///// Entry Point /////
@@ -1481,12 +1621,6 @@ const isMainModule = process.argv[1] &&
 
 if (isMainModule) {
   runCLI().catch(error => {
-    // Commander.js throws on --help and --version due to exitOverride()
-    // These are normal exits, not errors -- check for CommanderError
-    if (error && error.code === 'commander.version' || error?.code === 'commander.help' ||
-        error?.code === 'commander.helpDisplayed') {
-      process.exit(0);
-    }
     handleError(error);
   });
 }
@@ -1495,6 +1629,7 @@ export {
   VERSION,
   EXIT_CODES,
   DEFAULT_CONFIG,
+  parseArgs,
   CliError,
   UsageError,
   ConfigError,
@@ -1535,11 +1670,15 @@ export {
   getUsageData,
   getCacheFilePath,
   readCache,
+  readCacheRawSync,
   writeCache,
   getCachedUsageData,
+  detectProviderFromEnv,
+  refreshCache,
   buildPlaceholderValues,
   applyTemplate,
   formatDefaultOutput,
+  formatProviderName,
   verboseLog,
   outputVerboseInfo,
   runCLI,

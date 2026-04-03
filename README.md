@@ -31,6 +31,15 @@ npx cc-third-party-usage --json
 bunx cc-third-party-usage --template "{provider}: {used}/{total}"
 ```
 
+> **💡 First Run Note**: The first `bunx`/`npx` execution may take 10-60 seconds to download and cache the package. Subsequent runs are instant (<1s). For immediate use in statusLine, run once manually to pre-cache:
+>
+> ```bash
+> # Pre-cache the package
+> bunx cc-third-party-usage --version
+> # or
+> npx cc-third-party-usage --version
+> ```
+
 ### Global Installation
 
 Install globally for frequent use:
@@ -73,15 +82,23 @@ Add to your Claude Code settings:
 }
 ```
 
-Or with full path:
+Or with npx/bunx (no installation needed):
 
 ```json
 {
   "statusLine": {
-    "command": "bun /path/to/cc-third-party-usage/usage.mjs"
+    "command": "bunx cc-third-party-usage"
   }
 }
 ```
+
+### ccstatusline Integration
+
+Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/ccstatusline):
+
+1. Add a **Custom Command** widget
+2. Set command: `bunx -y cc-third-party-usage`
+3. Set timeout: **3000** (ms, press `t` in widget editor)
 
 ### CLI Usage
 
