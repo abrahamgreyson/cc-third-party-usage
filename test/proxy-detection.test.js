@@ -2,7 +2,7 @@
 // Tests for PROXY-01: CC Switch proxy detection via environment variables
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { mockEnv } from '../tests/conftest.js';
+import { mockEnv } from './conftest.js';
 import { isProxyEnabled, getLocalAddressPatterns } from '../usage.mjs';
 
 describe('getLocalAddressPatterns', () => {

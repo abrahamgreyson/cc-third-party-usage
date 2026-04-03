@@ -2,7 +2,7 @@
 // Tests for PROV-02~03: Credential resolution from proxy or environment
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { mockEnv, createMockCCSwitchDatabase } from '../tests/conftest.js';
+import { mockEnv, createMockCCSwitchDatabase } from './conftest.js';
 import { ConfigError, EXIT_CODES, getCredentials, getEnvCredentials, isProxyEnabled } from '../usage.mjs';
 
 describe('getCredentials', () => {

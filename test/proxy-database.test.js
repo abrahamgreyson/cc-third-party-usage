@@ -2,7 +2,7 @@
 // Tests for PROXY-02~05: CC Switch database credential extraction
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { createMockCCSwitchDatabase, createTestDatabase, mockEnv } from '../tests/conftest.js';
+import { createMockCCSwitchDatabase, createTestDatabase, mockEnv } from './conftest.js';
 import { ConfigError, EXIT_CODES, loadDatabaseModule, expandHomePath, getProxyCredentials, CC_SWITCH_DB_PATH } from '../usage.mjs';
 
 describe('getProxyCredentials', () => {

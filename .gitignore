@@ -42,8 +42,6 @@ coverage/
 .env.local
 .env.*.local
 
-# GSD planning directory (optional - uncomment if you don't want to track planning)
+# GSD / Claude context
 .planning/
-
-# Planning artifacts (local only)
-.planning/
+.claude/
