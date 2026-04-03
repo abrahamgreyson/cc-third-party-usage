@@ -2,7 +2,7 @@
 
 ///// Metadata /////
 
-const VERSION = '1.0.6';
+const VERSION = '1.0.7';
 const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
 
 ///// CLI Argument Parser (zero-dependency) /////

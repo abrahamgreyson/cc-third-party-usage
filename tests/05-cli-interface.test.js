@@ -882,7 +882,7 @@ describe('runCLI', () => {
   test('should handle --version flag and output version string', async () => {
     const { VERSION } = await import('../usage.mjs');
     const versionOutput = `cc-third-party-usage v${VERSION}`;
-    expect(versionOutput).toBe('cc-third-party-usage v1.0.6');
+    expect(versionOutput).toBe('cc-third-party-usage v1.0.7');
   });
 });
 
