@@ -1,81 +1,81 @@
 # CC Third Party Usage Monitor
 
-**[English](./README.md)** | **[中文](./README.zh-CN.md)**
+**[English](./README.en.md)** | **[中文](./README.md)**
 
-> CLI tool for monitoring third-party AI model (Kimi / GLM) API usage in Claude Code statusLine
+> 在 Claude Code 状态栏中监控第三方 AI 模型（Kimi / GLM）API 用量的 CLI 工具
 
 [![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![demo](./demo.png)
 
-## ✨ Features
+## ✨ 特性
 
-- **Multi-Provider Support** - Monitor Kimi (Moonshot) and GLM (Zhipu AI) API usage
-- **Auto-Configuration** - Detects API credentials from environment or local proxy automatically
-- **Instant Response** - Reads cache synchronously and exits in <30ms; API fetch runs in detached background process
-- **Flexible Output** - Default concise format, JSON, or custom templates
+- **多服务商支持** — 同时支持 Kimi（月之暗面）和 GLM（智谱 AI）API 用量监控
+- **自动配置** — 自动从环境变量或本地代理检测 API 凭据，零配置即可使用
+- **即时响应** — 同步读取缓存，30ms 内输出结果；API 请求在后台独立进程异步完成
+- **灵活输出** — 支持默认精简格式、JSON、自定义模板等多种输出方式
 
-## 📦 Installation & Usage
+## 📦 安装与使用
 
-### Global Installation (Recommended)
+### 全局安装（推荐）
 
-**Why not npx/bunx?** `npx`/`bunx` adds 1-2 seconds of overhead on every invocation for package resolution and lockfile management. This overhead is problematic for any tool that expects fast command response (e.g., status bar integrations with execution timeouts). Global installation eliminates this overhead entirely.
+**为什么不建议使用 npx/bunx？** `npx`/`bunx` 每次调用都需要 1-2 秒进行包解析和锁文件管理。对于要求快速响应的工具（如带有执行超时的状态栏集成），这一开销会导致超时问题。全局安装可彻底消除此开销。
 
 ```bash
-# Using npm
+# 使用 npm
 npm install -g cc-third-party-usage
 
-# Using Bun (faster)
+# 使用 Bun（更快）
 bun install -g cc-third-party-usage
 
-# Then run anywhere (30ms response)
+# 安装后即可在任何地方运行（30ms 响应）
 cc-third-party-usage
 ```
 
-### One-off Usage (npx/bunx)
+### 一次性使用（npx/bunx）
 
-> ⚠️ **Not recommended via npx/bunx.** Adds 1-2s overhead per invocation. Use global installation instead.
+> ⚠️ **不推荐通过 npx/bunx 运行。** 每次调用额外增加 1-2 秒开销，请使用全局安装。
 
 ```bash
-# Using npx
+# 使用 npx
 npx cc-third-party-usage
 
-# Using bunx (slightly faster)
+# 使用 bunx（稍快）
 bunx cc-third-party-usage
 
-# With options
+# 附带参数
 npx cc-third-party-usage --json
 ```
 
-### From Source
+### 从源码运行
 
 ```bash
 git clone https://github.com/abrahamgreyson/cc-third-party-usage.git
 cd cc-third-party-usage
 
-# Fastest option (~30ms with Node, ~18ms with Bun)
+# 最快方式（Node 约 30ms，Bun 约 18ms）
 node dist/usage.js
 bun dist/usage.js
 ```
 
-## ⚡ Performance
+## ⚡ 性能
 
-| Method | Response Time | Notes |
-|--------|--------------|-------|
-| `node dist/usage.js` | **~30ms** | Direct file execution, fastest |
-| `bun dist/usage.js` | **~18ms** | Bun runtime, even faster |
-| `cc-third-party-usage` (global install) | **~900ms** | Node startup + SQLite init |
-| `bunx cc-third-party-usage` | **~1100ms** | Package resolution overhead every time |
-| `npx cc-third-party-usage` | **~2500ms** | Slowest, npm resolution overhead |
+| 方式 | 响应时间 | 说明 |
+|------|---------|------|
+| `node dist/usage.js` | **~30ms** | 直接执行文件，最快 |
+| `bun dist/usage.js` | **~18ms** | Bun 运行时，更快 |
+| `cc-third-party-usage`（全局安装） | **~900ms** | Node 启动 + SQLite 初始化 |
+| `bunx cc-third-party-usage` | **~1100ms** | 每次都需要包解析 |
+| `npx cc-third-party-usage` | **~2500ms** | 最慢，npm 解析开销最大 |
 
-The tool uses an **instant-response architecture**: it reads cached data synchronously and exits immediately, then spawns a detached background process to fetch fresh API data for the next invocation. Your script execution itself is always <30ms — the time variance above is purely runtime startup overhead.
+本工具采用**即时响应架构**：同步读取缓存数据后立即输出退出，同时启动独立的守护进程在后台获取最新 API 数据供下次调用使用。脚本本身执行始终在 30ms 以内——上表中的时间差异完全来自运行时的启动开销。
 
-## 🚀 Integration
+## 🚀 集成
 
-### Claude Code statusLine
+### Claude Code 原生状态栏
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
+在 Claude Code 设置文件（`~/.claude/settings.json`）中添加：
 
 ```json
 {
@@ -85,7 +85,7 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
-Or for the fastest response, clone and build first, then use the direct path:
+如需最快响应，可先克隆并构建，然后使用绝对路径：
 
 ```bash
 git clone https://github.com/abrahamgreyson/cc-third-party-usage.git
@@ -100,54 +100,54 @@ cd cc-third-party-usage && bun run build
 }
 ```
 
-### ccstatusline Integration
+### ccstatusline 集成
 
-Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/ccstatusline):
+在 [ccstatusline](https://github.com/sirmalloc/ccstatusline) 中作为 Custom Command 组件使用：
 
-1. Add a **Custom Command** widget
-2. Set command: `cc-third-party-usage` (if globally installed)
-3. Or set command: `node /path/to/cc-third-party-usage/dist/usage.js` (fastest)
-4. Set timeout: **3000** (ms, press `t` in widget editor)
+1. 添加一个 **Custom Command** 组件
+2. 设置命令：`cc-third-party-usage`（需全局安装）
+3. 或设置命令：`node /path/to/cc-third-party-usage/dist/usage.js`（最快）
+4. 设置超时：**3000**（毫秒，在组件编辑器中按 `t` 键）
 
-### CLI Usage
+### 命令行使用
 
 ```bash
-# Set environment variables first (or configure via local proxy)
+# 首先设置环境变量（或通过本地代理配置）
 export ANTHROPIC_BASE_URL=https://api.kimi.com
 export ANTHROPIC_API_KEY=your-api-key
 
-# Default output (optimized for statusLine)
+# 默认输出（为状态栏优化）
 cc-third-party-usage
-# Output: Kimi: 45.2% used | 2h30m left
+# 输出：Kimi: 45.2% used | 2h30m left
 
-# JSON output
+# JSON 输出
 cc-third-party-usage --json
 
-# Custom template
+# 自定义模板
 cc-third-party-usage --template "{provider}: {used}/{total} ({percent}%)"
 
-# Verbose mode (debugging)
+# 详细模式（调试用）
 cc-third-party-usage --verbose
 
-# Custom cache duration (default: 60s)
+# 自定义缓存时长（默认 60 秒）
 cc-third-party-usage --cache-duration 120
 
-# Help
+# 帮助信息
 cc-third-party-usage --help
 
-# Version
+# 版本号
 cc-third-party-usage --version
 ```
 
-## 📋 Output Formats
+## 📋 输出格式
 
-### Default (statusLine-optimized)
+### 默认格式（状态栏优化）
 
 ```
 Kimi: 45.2% used | 2h30m left
 ```
 
-### JSON Output (`--json`)
+### JSON 输出（`--json`）
 
 ```json
 {
@@ -167,75 +167,75 @@ Kimi: 45.2% used | 2h30m left
 }
 ```
 
-### Custom Templates (`--template`)
+### 自定义模板（`--template`）
 
-Supported placeholders:
-- `{provider}` - Provider name (Kimi/GLM)
-- `{total}` - Total quota (shortest window)
-- `{used}` - Used quota (shortest window)
-- `{remaining}` - Remaining quota (shortest window)
-- `{percent}` - Usage percentage (shortest window)
-- `{reset}` - Reset time (shortest window)
-- `{5h_total}`, `{5h_used}`, etc. - Window-specific values
+支持的占位符：
+- `{provider}` — 服务商名称（Kimi/GLM）
+- `{total}` — 总配额（最短窗口）
+- `{used}` — 已用配额（最短窗口）
+- `{remaining}` — 剩余配额（最短窗口）
+- `{percent}` — 用量百分比（最短窗口）
+- `{reset}` — 重置时间（最短窗口）
+- `{5h_total}`, `{5h_used}` 等 — 指定窗口的值
 
-Examples:
+示例：
 ```bash
 cc-third-party-usage --template "{provider}: {used}/{total}"
-# Output: Kimi: 45/100
+# 输出：Kimi: 45/100
 
 cc-third-party-usage --template "{percent}% used, {remaining} remaining"
-# Output: 45.2% used, 55 remaining
+# 输出：45.2% used, 55 remaining
 ```
 
-## 🔧 Configuration
+## 🔧 配置
 
-### Environment Variables
+### 环境变量
 
-The tool automatically detects API credentials from:
-1. **Local proxy database** (if `ANTHROPIC_BASE_URL` points to localhost) - for proxy users
-2. **Environment variables** (fallback):
-   - `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`
-   - `ANTHROPIC_BASE_URL` or `BASE_URL`
+工具会自动检测 API 凭据，优先级如下：
+1. **本地代理数据库**（当 `ANTHROPIC_BASE_URL` 指向 localhost 时）— 适用于代理用户
+2. **环境变量**（回退方案）：
+   - `ANTHROPIC_API_KEY` 或 `ANTHROPIC_AUTH_TOKEN`
+   - `ANTHROPIC_BASE_URL` 或 `BASE_URL`
 
-### Supported Providers
+### 支持的服务商
 
-| Provider | API Endpoint | Description |
-|----------|--------------|-------------|
-| **Kimi** | api.kimi.com | Moonshot AI |
-| **GLM** | open.bigmodel.cn | Zhipu AI |
+| 服务商 | API 地址 | 说明 |
+|--------|---------|------|
+| **Kimi** | api.kimi.com | 月之暗面 |
+| **GLM** | open.bigmodel.cn | 智谱 AI |
 
-### Cache Location
+### 缓存位置
 
-Cache files are stored in system temp directory:
-- **macOS/Linux**: `/tmp/cc-usage-cache/cc-usage-{provider}-cache.json`
-- **TTL**: 60 seconds (configurable via `--cache-duration`)
+缓存文件存储在系统临时目录：
+- **macOS/Linux**：`/tmp/cc-usage-cache/cc-usage-{provider}-cache.json`
+- **TTL**：60 秒（可通过 `--cache-duration` 配置）
 
-## 🛠️ Requirements
+## 🛠️ 系统要求
 
-- **Runtime**: Bun 1.3.10+ or Node.js 22.5.0+
-- **API Key**: Kimi or GLM API key (via environment variable or proxy)
+- **运行时**：Bun 1.3.10+ 或 Node.js 22.5.0+
+- **API 密钥**：Kimi 或 GLM API 密钥（通过环境变量或代理配置）
 
-## 🗺️ Roadmap
+## 🗺️ 路线图
 
-**v1.0 (Current)**
-- Core infrastructure with cross-runtime support
-- Kimi and GLM API integration
-- Automatic credential detection
-- Intelligent caching layer
-- Flexible CLI interface
+**v1.0（当前版本）**
+- 跨运行时的核心基础设施
+- Kimi 与 GLM API 集成
+- 自动凭据检测
+- 智能缓存层
+- 灵活的 CLI 接口
 
-**v1.1 (Planned)**
-- Additional provider support
-- Configuration file support (YAML/JSON)
-- Usage history export (CSV/JSON)
-- Watch mode for continuous monitoring
+**v1.1（规划中）**
+- 更多服务商支持
+- 配置文件支持（YAML/JSON）
+- 用量历史导出（CSV/JSON）
+- 持续监控模式
 
-## 📝 License
+## 📝 许可证
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT 许可证 — 详见 [LICENSE](LICENSE)。
 
-## 📮 Links
+## 📮 链接
 
-- [GitHub Repository](https://github.com/abrahamgreyson/cc-third-party-usage)
-- [npm Package](https://www.npmjs.com/package/cc-third-party-usage)
-- [Issue Tracker](https://github.com/abrahamgreyson/cc-third-party-usage/issues)
+- [GitHub 仓库](https://github.com/abrahamgreyson/cc-third-party-usage)
+- [npm 包](https://www.npmjs.com/package/cc-third-party-usage)
+- [问题追踪](https://github.com/abrahamgreyson/cc-third-party-usage/issues)
