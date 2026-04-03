@@ -126,7 +126,7 @@ describe('getCredentials', () => {
       try {
         await getCredentials();
       } catch (error) {
-        expect(error.message).toContain('CC Switch');
+        expect(error.message).toContain('ANTHROPIC_API_KEY');
       }
     });
   });

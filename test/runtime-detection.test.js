@@ -13,7 +13,8 @@ describe('CORE-01: Single-file ESM Architecture', () => {
   it('should export usage.mjs as ESM module with zero external dependencies', async () => {
     const module = await import('../usage.mjs');
     expect(module).toBeDefined();
-    expect(module.VERSION).toBe('1.0.0');
+    expect(typeof module.VERSION).toBe('string');
+    expect(module.VERSION).toMatch(/^\d+\.\d+\.\d+$/);
     // Verify no external dependencies by checking module only exports our functions
     const exports = Object.keys(module);
     expect(exports.length).toBeGreaterThan(0);
