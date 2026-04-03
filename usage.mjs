@@ -532,7 +532,7 @@ async function fetchWithRetry(url, options = {}) {
 ///// Path Utilities /////
 
 import { homedir, tmpdir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { readFile as fsReadFile, writeFile as fsWriteFile, rename as fsRename, unlink as fsUnlink } from 'fs/promises';
 import { spawn } from 'node:child_process';
@@ -1370,6 +1370,8 @@ function getTempFilePath(filePath) {
  * @returns {Promise<void>}
  */
 async function writeCache(filePath, data) {
+  const dir = dirname(filePath);
+  try { mkdirSync(dir, { recursive: true }); } catch {}
   const tempPath = getTempFilePath(filePath);
   try {
     await fsWriteFile(tempPath, JSON.stringify(data));
