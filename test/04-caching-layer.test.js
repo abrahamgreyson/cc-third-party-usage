@@ -3,9 +3,9 @@
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { mockFetchResponse, mockEnv } from './conftest';
 
 // Import existing exports from usage.mjs
@@ -296,6 +296,7 @@ describe('getCachedUsageData', () => {
       fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
+    mkdirSync(dirname(cachePath), { recursive: true });
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
@@ -377,6 +378,7 @@ describe('getCachedUsageData', () => {
       fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
+    mkdirSync(dirname(cachePath), { recursive: true });
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
@@ -407,6 +409,7 @@ describe('getCachedUsageData', () => {
       fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
+    mkdirSync(dirname(cachePath), { recursive: true });
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {
@@ -438,6 +441,7 @@ describe('getCachedUsageData', () => {
       fetchedAt: new Date().toISOString()
     };
     const cachePath = getCacheFilePath(provider);
+    mkdirSync(dirname(cachePath), { recursive: true });
     await writeFile(cachePath, JSON.stringify(cachedData));
 
     try {

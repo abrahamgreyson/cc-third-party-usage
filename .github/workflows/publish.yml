@@ -19,6 +19,12 @@ jobs:
 
       - run: bun run build
 
+      # Sync package.json version with git tag (e.g. v1.2.3 -> 1.2.3)
+      - run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing package.json version to $TAG_VERSION"
+          jq --arg v "$TAG_VERSION" '.version = $v' package.json > tmp.json && mv tmp.json package.json
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22

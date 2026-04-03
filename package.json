@@ -1,6 +1,6 @@
 {
   "name": "cc-third-party-usage",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection",
   "type": "module",
   "main": "dist/usage.js",
