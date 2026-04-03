@@ -5,7 +5,7 @@
 > CLI tool for monitoring third-party AI model (Kimi / GLM) API usage in Claude Code statusLine
 
 [![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
-![CI](https://github.com/abrahamgreyson/cc-third-party-usage/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/abrahamgreyson/cc-third-party-usage/actions/workflows/ci.yml/badge.svg)](https://github.com/abrahamgreyson/cc-third-party-usage/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![demo](./demo.png)

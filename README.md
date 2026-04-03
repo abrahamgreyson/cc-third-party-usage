@@ -5,7 +5,7 @@
 > 在 Claude Code 状态栏中监控第三方 AI 模型（Kimi / GLM）API 用量的 CLI 工具
 
 [![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
-![CI](https://github.com/abrahamgreyson/cc-third-party-usage/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/abrahamgreyson/cc-third-party-usage/actions/workflows/ci.yml/badge.svg)](https://github.com/abrahamgreyson/cc-third-party-usage/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![demo](./demo.png)
