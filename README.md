@@ -10,49 +10,39 @@
 - **Multi-Provider Support** - Monitor Kimi (Moonshot) and GLM (Zhipu AI) API usage
 - **Auto-Configuration** - Detects API credentials from environment or local proxy automatically
 - **Cross-Runtime** - Works on Bun 1.3.10+ and Node.js 22.5.0+
-- **Intelligent Caching** - 60s TTL with atomic writes, optimized for statusLine refresh
+- **Instant Response** - Reads cache synchronously and exits in <30ms; API fetch runs in detached background process
 - **Flexible Output** - Default concise format, JSON, or custom templates
 
-## 📦 Usage
+## 📦 Installation & Usage
 
-### No Installation Required (Recommended)
+### Global Installation (Recommended for statusLine)
 
-Run directly with **npx** or **bunx**:
-
-```bash
-# Using npx (Node.js)
-npx cc-third-party-usage
-
-# Using bunx (Bun)
-bunx cc-third-party-usage
-
-# With options
-npx cc-third-party-usage --json
-bunx cc-third-party-usage --template "{provider}: {used}/{total}"
-```
-
-> **💡 First Run Note**: The first `bunx`/`npx` execution may take 10-60 seconds to download and cache the package. Subsequent runs are instant (<1s). For immediate use in statusLine, run once manually to pre-cache:
->
-> ```bash
-> # Pre-cache the package
-> bunx cc-third-party-usage --version
-> # or
-> npx cc-third-party-usage --version
-> ```
-
-### Global Installation
-
-Install globally for frequent use:
+**Why not npx/bunx?** `npx`/`bunx` adds 1-2 seconds of overhead on every invocation for package resolution, downloading, and lockfile management. This causes timeouts when used in statusLine (Claude Code statusLine or ccstatusline Custom Commands). Global installation eliminates this overhead entirely.
 
 ```bash
 # Using npm
 npm install -g cc-third-party-usage
 
-# Using Bun
+# Using Bun (faster)
 bun install -g cc-third-party-usage
 
-# Then run anywhere
+# Then run anywhere (30ms response)
 cc-usage
+```
+
+### One-off Usage (npx/bunx)
+
+> ⚠️ **Not recommended for statusLine use.** `npx`/`bunx` adds 1-2s overhead per invocation, causing statusLine timeouts. Use global installation instead.
+
+```bash
+# Using npx
+npx cc-third-party-usage
+
+# Using bunx (slightly faster)
+bunx cc-third-party-usage
+
+# With options
+npx cc-third-party-usage --json
 ```
 
 ### From Source
@@ -61,19 +51,30 @@ cc-usage
 git clone https://github.com/abrahamgreyson/cc-third-party-usage.git
 cd cc-third-party-usage
 
-# Using Bun (recommended)
-bun usage.mjs
-
-# Using Node.js
-node usage.mjs
+# Fastest option (~30ms with Node, ~18ms with Bun)
+node dist/usage.js
+bun dist/usage.js
 ```
 
-## 🚀 Quick Start
+## ⚡ Performance
 
-### Claude Code statusLine Integration
+| Method | Response Time | Notes |
+|--------|--------------|-------|
+| `node dist/usage.js` | **~30ms** | Direct file execution, fastest |
+| `bun dist/usage.js` | **~18ms** | Bun runtime, even faster |
+| `cc-usage` (global install) | **~900ms** | Node startup + SQLite init |
+| `bunx cc-third-party-usage` | **~1100ms** | Package resolution overhead every time |
+| `npx cc-third-party-usage` | **~2500ms** | Slowest, npm resolution overhead |
 
-Add to your Claude Code settings:
+The tool uses an **instant-response architecture**: it reads cached data synchronously and exits immediately, then spawns a detached background process to fetch fresh API data for the next invocation. Your script execution itself is always <30ms — the time variance above is purely runtime startup overhead.
 
+## 🚀 Integration
+
+### Claude Code statusLine
+
+Add to your Claude Code settings (`~/.claude/settings.json`):
+
+**Option 1: Global install (recommended, ~900ms)**
 ```json
 {
   "statusLine": {
@@ -82,12 +83,19 @@ Add to your Claude Code settings:
 }
 ```
 
-Or with npx/bunx (no installation needed):
+**Option 2: Direct file path (fastest, ~30ms)**
 
+First clone and build:
+```bash
+git clone https://github.com/abrahamgreyson/cc-third-party-usage.git
+cd cc-third-party-usage && bun run build
+```
+
+Then configure with the full path:
 ```json
 {
   "statusLine": {
-    "command": "bunx cc-third-party-usage"
+    "command": "node /path/to/cc-third-party-usage/dist/usage.js"
   }
 }
 ```
@@ -97,8 +105,9 @@ Or with npx/bunx (no installation needed):
 Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/ccstatusline):
 
 1. Add a **Custom Command** widget
-2. Set command: `bunx -y cc-third-party-usage`
-3. Set timeout: **3000** (ms, press `t` in widget editor)
+2. Set command: `cc-usage` (if globally installed)
+3. Or set command: `node /path/to/cc-third-party-usage/dist/usage.js` (fastest)
+4. Set timeout: **3000** (ms, press `t` in widget editor)
 
 ### CLI Usage
 
@@ -194,7 +203,7 @@ The tool automatically detects API credentials from:
 ### Cache Location
 
 Cache files are stored in system temp directory:
-- **macOS/Linux**: `/tmp/cc-usage-{provider}-cache.json`
+- **macOS/Linux**: `/tmp/cc-usage-cache/cc-usage-{provider}-cache.json`
 - **TTL**: 60 seconds (configurable via `--cache-duration`)
 
 ## 🛠️ Requirements
@@ -226,7 +235,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [GitHub Repository](https://github.com/abrahamgreyson/cc-third-party-usage)
 - [npm Package](https://www.npmjs.com/package/cc-third-party-usage)
 - [Issue Tracker](https://github.com/abrahamgreyson/cc-third-party-usage/issues)
-
----
-
-**Made with ❤️ by Abraham Greyson**
