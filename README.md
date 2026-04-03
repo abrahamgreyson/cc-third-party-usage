@@ -1,5 +1,7 @@
 # CC Third Party Usage Monitor
 
+**[English](./README.md)** | **[中文](./README.zh-CN.md)**
+
 > CLI tool for monitoring third-party AI model (Kimi / GLM) API usage in Claude Code statusLine
 
 [![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
