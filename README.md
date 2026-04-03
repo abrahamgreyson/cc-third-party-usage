@@ -1,23 +1,24 @@
 # CC Third Party Usage Monitor
 
-> Cross-runtime CLI tool for monitoring Kimi and GLM API usage with automatic configuration detection
+> CLI tool for monitoring third-party AI model (Kimi / GLM) API usage in Claude Code statusLine
 
-[![npm version](https://badge.fury.io/js/cc-third-party-usage.svg)](https://badge.fury.io/js/cc-third-party-usage)
+[![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+![demo](./docs/demo.png)
 
 ## ✨ Features
 
 - **Multi-Provider Support** - Monitor Kimi (Moonshot) and GLM (Zhipu AI) API usage
 - **Auto-Configuration** - Detects API credentials from environment or local proxy automatically
-- **Cross-Runtime** - Works on Bun 1.3.10+ and Node.js 22.5.0+
 - **Instant Response** - Reads cache synchronously and exits in <30ms; API fetch runs in detached background process
 - **Flexible Output** - Default concise format, JSON, or custom templates
 
 ## 📦 Installation & Usage
 
-### Global Installation (Recommended for statusLine)
+### Global Installation (Recommended)
 
-**Why not npx/bunx?** `npx`/`bunx` adds 1-2 seconds of overhead on every invocation for package resolution, downloading, and lockfile management. This causes timeouts when used in statusLine (Claude Code statusLine or ccstatusline Custom Commands). Global installation eliminates this overhead entirely.
+**Why not npx/bunx?** `npx`/`bunx` adds 1-2 seconds of overhead on every invocation for package resolution and lockfile management. This overhead is problematic for any tool that expects fast command response (e.g., status bar integrations with execution timeouts). Global installation eliminates this overhead entirely.
 
 ```bash
 # Using npm
@@ -32,7 +33,7 @@ cc-third-party-usage
 
 ### One-off Usage (npx/bunx)
 
-> ⚠️ **Not recommended for statusLine use.** `npx`/`bunx` adds 1-2s overhead per invocation, causing statusLine timeouts. Use global installation instead.
+> ⚠️ **Not recommended via npx/bunx.** Adds 1-2s overhead per invocation. Use global installation instead.
 
 ```bash
 # Using npx
@@ -74,7 +75,6 @@ The tool uses an **instant-response architecture**: it reads cached data synchro
 
 Add to your Claude Code settings (`~/.claude/settings.json`):
 
-**Option 1: Global install (recommended, ~900ms)**
 ```json
 {
   "statusLine": {
@@ -83,15 +83,13 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
-**Option 2: Direct file path (fastest, ~30ms)**
+Or for the fastest response, clone and build first, then use the direct path:
 
-First clone and build:
 ```bash
 git clone https://github.com/abrahamgreyson/cc-third-party-usage.git
 cd cc-third-party-usage && bun run build
 ```
 
-Then configure with the full path:
 ```json
 {
   "statusLine": {
@@ -112,6 +110,10 @@ Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/
 ### CLI Usage
 
 ```bash
+# Set environment variables first (or configure via local proxy)
+export ANTHROPIC_BASE_URL=https://api.kimi.com
+export ANTHROPIC_API_KEY=your-api-key
+
 # Default output (optimized for statusLine)
 cc-third-party-usage
 # Output: Kimi: 45.2% used | 2h30m left
@@ -203,7 +205,7 @@ The tool automatically detects API credentials from:
 ### Cache Location
 
 Cache files are stored in system temp directory:
-- **macOS/Linux**: `/tmp/cc-third-party-usage-cache/cc-third-party-usage-{provider}-cache.json`
+- **macOS/Linux**: `/tmp/cc-usage-cache/cc-usage-{provider}-cache.json`
 - **TTL**: 60 seconds (configurable via `--cache-duration`)
 
 ## 🛠️ Requirements
