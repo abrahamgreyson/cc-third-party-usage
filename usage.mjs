@@ -57,7 +57,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  process.stdout.write(`Usage: cc-usage [options]
+  process.stdout.write(`Usage: cc-third-party-usage [options]
 
 ${DESCRIPTION}
 
@@ -1338,10 +1338,17 @@ function spawnBackgroundFetch(cacheDuration) {
  * @returns {Promise<object|null>} Cached data or null if expired/missing
  */
 async function readCache(filePath, maxAgeMs) {
-  const raw = await readCacheRaw(filePath);
-  if (!raw) return null;
-  if (raw.ageMs > maxAgeMs) return null;
-  return raw.data;
+  let raw;
+  try {
+    const content = await fsReadFile(filePath, 'utf-8');
+    raw = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  if (!raw || !raw.timestamp) return null;
+  const ageMs = Date.now() - raw.timestamp;
+  if (ageMs > maxAgeMs) return null;
+  return raw;
 }
 
 /**
@@ -1509,19 +1516,6 @@ async function refreshCache(expectedProvider, filePath) {
   }
 }
 
-/**
- * Detect provider from environment without throwing.
- * @returns {string|null}
- */
-function detectProviderFromEnv() {
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.BASE_URL;
-  if (!baseUrl) return null;
-  try {
-    return detectProvider(baseUrl);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Alias used in runCLI (same as readCacheRawSync).
@@ -1701,7 +1695,7 @@ async function runCLI() {
   }
 
   if (options.showVersion) {
-    process.stdout.write(`cc-usage v${VERSION}\n`);
+    process.stdout.write(`cc-third-party-usage v${VERSION}\n`);
     process.exit(0);
   }
 
@@ -1767,8 +1761,9 @@ async function runCLI() {
 
 ///// Entry Point /////
 
-const isMainModule = process.argv[1] &&
-  (process.argv[1].includes('usage.mjs') || process.argv[1].includes('usage'));
+const _entryFile = process.argv[1] || '';
+const isMainModule = _entryFile &&
+  (_entryFile.endsWith('usage.mjs') || _entryFile.endsWith('usage.js') || _entryFile.endsWith('usage'));
 
 if (isMainModule) {
   runCLI().catch(error => {

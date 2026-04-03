@@ -27,7 +27,7 @@ npm install -g cc-third-party-usage
 bun install -g cc-third-party-usage
 
 # Then run anywhere (30ms response)
-cc-usage
+cc-third-party-usage
 ```
 
 ### One-off Usage (npx/bunx)
@@ -62,7 +62,7 @@ bun dist/usage.js
 |--------|--------------|-------|
 | `node dist/usage.js` | **~30ms** | Direct file execution, fastest |
 | `bun dist/usage.js` | **~18ms** | Bun runtime, even faster |
-| `cc-usage` (global install) | **~900ms** | Node startup + SQLite init |
+| `cc-third-party-usage` (global install) | **~900ms** | Node startup + SQLite init |
 | `bunx cc-third-party-usage` | **~1100ms** | Package resolution overhead every time |
 | `npx cc-third-party-usage` | **~2500ms** | Slowest, npm resolution overhead |
 
@@ -78,7 +78,7 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 ```json
 {
   "statusLine": {
-    "command": "cc-usage"
+    "command": "cc-third-party-usage"
   }
 }
 ```
@@ -105,7 +105,7 @@ Then configure with the full path:
 Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/ccstatusline):
 
 1. Add a **Custom Command** widget
-2. Set command: `cc-usage` (if globally installed)
+2. Set command: `cc-third-party-usage` (if globally installed)
 3. Or set command: `node /path/to/cc-third-party-usage/dist/usage.js` (fastest)
 4. Set timeout: **3000** (ms, press `t` in widget editor)
 
@@ -113,26 +113,26 @@ Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/
 
 ```bash
 # Default output (optimized for statusLine)
-cc-usage
+cc-third-party-usage
 # Output: Kimi: 45.2% | 2h30m
 
 # JSON output
-cc-usage --json
+cc-third-party-usage --json
 
 # Custom template
-cc-usage --template "{provider}: {used}/{total} ({percent}%)"
+cc-third-party-usage --template "{provider}: {used}/{total} ({percent}%)"
 
 # Verbose mode (debugging)
-cc-usage --verbose
+cc-third-party-usage --verbose
 
 # Custom cache duration (default: 60s)
-cc-usage --cache-duration 120
+cc-third-party-usage --cache-duration 120
 
 # Help
-cc-usage --help
+cc-third-party-usage --help
 
 # Version
-cc-usage --version
+cc-third-party-usage --version
 ```
 
 ## 📋 Output Formats
@@ -176,10 +176,10 @@ Supported placeholders:
 
 Examples:
 ```bash
-cc-usage --template "{provider}: {used}/{total}"
+cc-third-party-usage --template "{provider}: {used}/{total}"
 # Output: Kimi: 45/100
 
-cc-usage --template "{percent}% used, {remaining} remaining"
+cc-third-party-usage --template "{percent}% used, {remaining} remaining"
 # Output: 45.2% used, 55 remaining
 ```
 
@@ -203,7 +203,7 @@ The tool automatically detects API credentials from:
 ### Cache Location
 
 Cache files are stored in system temp directory:
-- **macOS/Linux**: `/tmp/cc-usage-cache/cc-usage-{provider}-cache.json`
+- **macOS/Linux**: `/tmp/cc-third-party-usage-cache/cc-third-party-usage-{provider}-cache.json`
 - **TTL**: 60 seconds (configurable via `--cache-duration`)
 
 ## 🛠️ Requirements

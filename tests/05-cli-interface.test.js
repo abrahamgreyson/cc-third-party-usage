@@ -464,7 +464,7 @@ describe('buildPlaceholderValues', () => {
 
     const result = buildPlaceholderValues(data);
 
-    expect(result.provider).toBe('Glm');
+    expect(result.provider).toBe('GLM');
     expect(result['5h_percent']).toBe(6.4);
     expect(result['5h_reset']).toBe('4h15m');
     expect(result['5h_used']).toBe(64);
@@ -576,12 +576,12 @@ describe('applyTemplate', () => {
 
   test('should replace {provider} placeholder with provider name', () => {
     const result = applyTemplate('{provider}', mockData);
-    expect(result).toBe('Glm');
+    expect(result).toBe('GLM');
   });
 
   test('should replace window-prefixed placeholders ({5h_percent}, {weekly_reset})', () => {
     const result = applyTemplate('{provider}: {5h_percent}%', mockData);
-    expect(result).toBe('Glm: 6.4%');
+    expect(result).toBe('GLM: 6.4%');
   });
 
   test('should keep unknown placeholders as-is (e.g., {unknown})', () => {
@@ -596,7 +596,7 @@ describe('applyTemplate', () => {
 
   test('should replace multiple placeholders in one template', () => {
     const result = applyTemplate('{provider}: {5h_used}/{5h_total} ({5h_percent}%)', mockData);
-    expect(result).toBe('Glm: 64/1000 (6.4%)');
+    expect(result).toBe('GLM: 64/1000 (6.4%)');
   });
 
   test('should replace bare placeholder {percent} with shortest-reset-window percent', () => {
@@ -672,7 +672,7 @@ describe('formatDefaultOutput', () => {
 
     const result = formatDefaultOutput(data);
 
-    expect(result).toMatch(/^Glm: 6\.4% \| .+$/);
+    expect(result).toMatch(/^GLM: 6\.4% \| .+$/);
   });
 
   test('should select shortest reset window when multiple windows available', () => {
@@ -872,7 +872,7 @@ describe('runCLI', () => {
 
   test('should parse --template flag with custom format string', () => {
     const result = applyTemplate('{provider}', mockUsageData);
-    expect(result).toBe('Glm');
+    expect(result).toBe('GLM');
   });
 
   test('should parse --cache-duration with default 60 seconds', () => {
@@ -881,8 +881,8 @@ describe('runCLI', () => {
 
   test('should handle --version flag and output version string', async () => {
     const { VERSION } = await import('../usage.mjs');
-    const versionOutput = `usage.mjs v${VERSION}`;
-    expect(versionOutput).toBe('usage.mjs v1.0.0');
+    const versionOutput = `cc-third-party-usage v${VERSION}`;
+    expect(versionOutput).toBe('cc-third-party-usage v1.0.5');
   });
 });
 
@@ -916,7 +916,7 @@ describe('stdout/stderr separation', () => {
     }
 
     expect(stdoutWrites.length).toBeGreaterThan(0);
-    expect(stdoutWrites[0]).toContain('Glm:');
+    expect(stdoutWrites[0]).toContain('GLM:');
   });
 
   test('should send errors and verbose info to stderr', () => {

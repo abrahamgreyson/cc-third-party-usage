@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/usage.js",
   "bin": {
-    "cc-usage": "dist/usage.js"
+    "cc-third-party-usage": "dist/usage.js"
   },
   "scripts": {
     "build": "rm -rf dist/* && bun build usage.mjs --target=node --outfile=dist/usage.js --target-version=22",
