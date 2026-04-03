@@ -533,8 +533,9 @@ async function fetchWithRetry(url, options = {}) {
 
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { readFile as fsReadFile, writeFile as fsWriteFile, rename as fsRename, unlink as fsUnlink } from 'fs/promises';
+import { spawn } from 'node:child_process';
 
 /**
  * Expands ~ in path to user's home directory.
@@ -1250,30 +1251,81 @@ function parseGLMResponse(response) {
 ///// Caching Layer /////
 
 /**
+ * Get cache directory path (dedicated subdirectory).
+ * @returns {string}
+ */
+function getCacheDir() {
+  return join(tmpdir(), 'cc-usage-cache');
+}
+
+/**
+ * Ensure cache directory exists (idempotent).
+ */
+function ensureCacheDirSync() {
+  mkdirSync(getCacheDir(), { recursive: true });
+}
+
+/**
  * Get cache file path for a given provider.
- * Per D-03: Uses os.tmpdir() for cross-platform temp directory.
- * Per D-04: Filename pattern cc-usage-${provider}-cache.json.
  * @param {string} provider - Provider name ('kimi' or 'glm')
  * @returns {string} Absolute path to cache file
  */
 function getCacheFilePath(provider) {
-  return join(tmpdir(), `cc-usage-${provider}-cache.json`);
+  return join(getCacheDir(), `cc-usage-${provider}-cache.json`);
 }
 
 /**
- * Read cache file synchronously (for instant stale-while-revalidate).
- * Returns data with age info, or null if missing/unreadable.
- * Uses sync read to avoid async I/O scheduling overhead in statusLine.
+ * Write an initial stub cache file synchronously.
+ * Ensures there is ALWAYS a file to read on next invocation.
+ * @param {string} provider - Provider name
+ */
+function writeStubCacheSync(provider) {
+  const filePath = getCacheFilePath(provider);
+  const stub = {
+    timestamp: Date.now(),
+    provider,
+    quotas: [],
+    fetchedAt: new Date().toISOString(),
+    status: 'initializing'
+  };
+  try {
+    mkdirSync(getCacheDir(), { recursive: true });
+    writeFileSync(filePath, JSON.stringify(stub));
+  } catch {
+    // Fail-open
+  }
+}
+
+/**
+ * Read cache file synchronously, ignoring TTL.
+ * Used by the instant-response CLI flow.
  * @param {string} filePath - Path to cache file
- * @returns {{data: object, ageMs: number}|null}
+ * @returns {object|null} Cached data or null
  */
 function readCacheRawSync(filePath) {
   try {
     const content = readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(content);
-    return { data, ageMs: Date.now() - data.timestamp };
+    return JSON.parse(content);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Spawn a detached background child process to fetch fresh API data.
+ * Parent can exit immediately; child survives via .unref().
+ * @param {number} cacheDuration - Cache TTL in seconds
+ */
+function spawnBackgroundFetch(cacheDuration) {
+  const args = [process.argv[1], '--internal-bg-fetch', String(cacheDuration)];
+  try {
+    const child = spawn(process.execPath, args, {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+  } catch {
+    // Fail-open
   }
 }
 
@@ -1352,29 +1404,30 @@ async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, 
   if (cacheProvider) {
     const filePath = getCacheFilePath(cacheProvider);
     diagnostics.cachePath = filePath;
-    const raw = readCacheRawSync(filePath);
+    const cached = readCacheRawSync(filePath);
 
-    if (raw) {
-      if (raw.ageMs <= maxAgeMs) {
+    if (cached) {
+      const ageMs = Date.now() - cached.timestamp;
+      if (ageMs <= maxAgeMs) {
         // Fresh cache - return immediately
         diagnostics.cacheStatus = 'HIT';
-        diagnostics.cacheTtlRemaining = Math.round((maxAgeMs - raw.ageMs) / 1000);
-        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        diagnostics.cacheTtlRemaining = Math.round((maxAgeMs - ageMs) / 1000);
+        diagnostics.providerSource = cached.provider || cacheProvider;
         const data = {
-          provider: raw.data.provider,
-          quotas: raw.data.quotas || [],
-          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+          provider: cached.provider,
+          quotas: cached.quotas || [],
+          fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
         };
         return { data, diagnostics };
       } else {
         // Stale cache - return stale data, trigger background refresh
         diagnostics.cacheStatus = 'STALE';
         diagnostics.cacheTtlRemaining = 0;
-        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        diagnostics.providerSource = cached.provider || cacheProvider;
         const data = {
-          provider: raw.data.provider,
-          quotas: raw.data.quotas || [],
-          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+          provider: cached.provider,
+          quotas: cached.quotas || [],
+          fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
         };
         // Fire-and-forget background refresh
         refreshCache(cacheProvider, filePath);
@@ -1405,14 +1458,14 @@ async function getCachedUsageData(cacheDuration = DEFAULT_CONFIG.cacheDuration, 
     // API failed - check if any stale cache exists as last resort
     if (cacheProvider) {
       const filePath = getCacheFilePath(cacheProvider);
-      const raw = readCacheRawSync(filePath);
-      if (raw) {
+      const cached = readCacheRawSync(filePath);
+      if (cached) {
         diagnostics.cacheStatus = 'STALE_ERROR';
-        diagnostics.providerSource = raw.data.provider || cacheProvider;
+        diagnostics.providerSource = cached.provider || cacheProvider;
         const data = {
-          provider: raw.data.provider,
-          quotas: raw.data.quotas || [],
-          fetchedAt: raw.data.fetchedAt || new Date(raw.data.timestamp).toISOString()
+          provider: cached.provider,
+          quotas: cached.quotas || [],
+          fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
         };
         return { data, diagnostics };
       }
@@ -1456,6 +1509,29 @@ async function refreshCache(expectedProvider, filePath) {
   }
 }
 
+/**
+ * Detect provider from environment without throwing.
+ * @returns {string|null}
+ */
+function detectProviderFromEnv() {
+  const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.BASE_URL;
+  if (!baseUrl) return null;
+  try {
+    return detectProvider(baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Alias used in runCLI (same as readCacheRawSync).
+ * @param {string} filePath
+ * @returns {object|null}
+ */
+function readCacheRawSync2(filePath) {
+  return readCacheRawSync(filePath);
+}
+
 ///// CLI Interface /////
 
 /**
@@ -1483,6 +1559,10 @@ function buildPlaceholderValues(data) {
   const values = {
     provider: formatProviderName(data.provider)
   };
+
+  if (!data.quotas || data.quotas.length === 0) {
+    return values;
+  }
 
   for (const quota of data.quotas) {
     const prefix = quota.window;
@@ -1534,6 +1614,13 @@ function applyTemplate(template, data) {
  * @returns {string} Formatted statusLine string
  */
 function formatDefaultOutput(data) {
+  if (!data.quotas || data.quotas.length === 0) {
+    const providerName = data.provider && data.provider !== 'unknown'
+      ? formatProviderName(data.provider)
+      : '';
+    return providerName ? `${providerName}: Initializing...` : 'Initializing...';
+  }
+
   // D-05: Select quota with shortest reset time (most urgent)
   const sortedQuotas = [...data.quotas].sort((a, b) => {
     const aTime = a.reset_timestamp ?? Infinity;
@@ -1579,11 +1666,34 @@ function outputVerboseInfo(diagnostics) {
 }
 
 /**
- * Main CLI entry point (zero-dependency).
+ * Main CLI entry point — instant-response architecture.
+ * Main process NEVER does network I/O. All API fetching happens
+ * in a detached child process that survives parent exit.
+ *
+ * Flow:
+ * 1. If --internal-bg-fetch flag: fetch API, write cache, exit (background child)
+ * 2. Otherwise: read cache synchronously → output → spawn bg refresh → exit
  * @returns {Promise<void>}
  */
 async function runCLI() {
   const options = parseArgs(process.argv);
+
+  // Hidden background fetch mode (spawned by main process)
+  if (process.argv.includes('--internal-bg-fetch')) {
+    try {
+      const data = await getUsageData();
+      ensureCacheDirSync();
+      writeFileSync(getCacheFilePath(data.provider), JSON.stringify({
+        timestamp: Date.now(),
+        provider: data.provider,
+        quotas: data.quotas,
+        fetchedAt: data.fetchedAt
+      }));
+    } catch {
+      // Fail-open: background fetch errors are silent
+    }
+    process.exit(0);
+  }
 
   if (options.showHelp) {
     printHelp();
@@ -1595,10 +1705,51 @@ async function runCLI() {
     process.exit(0);
   }
 
-  const { data, diagnostics } = await getCachedUsageData(options.cacheDuration);
+  // Instant-response: read cache synchronously, never block on network
+  ensureCacheDirSync();
+  const provider = detectProviderFromEnv();
+  let data;
+
+  if (provider) {
+    const cached = readCacheRawSync(getCacheFilePath(provider));
+    if (cached) {
+      data = {
+        provider: cached.provider || provider,
+        quotas: cached.quotas || [],
+        fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
+      };
+    } else {
+      writeStubCacheSync(provider);
+      data = { provider, quotas: [], fetchedAt: new Date().toISOString() };
+    }
+  } else {
+    // Unknown provider — try all known caches
+    for (const p of ['kimi', 'glm']) {
+      const cached = readCacheRawSync(getCacheFilePath(p));
+      if (cached && cached.quotas && cached.quotas.length > 0) {
+        data = {
+          provider: cached.provider || p,
+          quotas: cached.quotas || [],
+          fetchedAt: cached.fetchedAt || new Date(cached.timestamp).toISOString()
+        };
+        break;
+      }
+    }
+    if (!data) {
+      data = { provider: 'unknown', quotas: [], fetchedAt: new Date().toISOString() };
+    }
+  }
 
   if (options.verbose) {
-    outputVerboseInfo(diagnostics);
+    outputVerboseInfo({
+      cacheStatus: data.quotas.length > 0 ? 'HIT' : 'MISS',
+      cachePath: provider ? getCacheFilePath(provider) : null,
+      cacheTtlRemaining: null,
+      apiDuration: null,
+      apiRetries: null,
+      apiUrl: null,
+      providerSource: provider || data.provider || 'unknown'
+    });
   }
 
   if (options.json) {
@@ -1609,13 +1760,13 @@ async function runCLI() {
     process.stdout.write(formatDefaultOutput(data) + '\n');
   }
 
-  // Force exit to avoid waiting for background cache refresh
+  // Spawn background fetch (fire and forget)
+  spawnBackgroundFetch(options.cacheDuration);
   process.exit(0);
 }
 
 ///// Entry Point /////
 
-// Per D-12: Dual-mode -- CLI when run directly, module when imported
 const isMainModule = process.argv[1] &&
   (process.argv[1].includes('usage.mjs') || process.argv[1].includes('usage'));
 
