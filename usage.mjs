@@ -940,16 +940,14 @@ function formatTimeRemaining(ms) {
  * @returns {string} Compact time string (e.g., "2h30m", "0s")
  */
 function formatCompactTime(ms) {
-  if (ms <= 0) return '0s';
+  if (ms <= 0) return '0m';
   const days = Math.floor(ms / 86400000);
   const hours = Math.floor((ms % 86400000) / 3600000);
   const minutes = Math.floor((ms % 3600000) / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
   const parts = [];
   if (days > 0) parts.push(`${days}d`);
   if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (seconds > 0 && days === 0) parts.push(`${seconds}s`);
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
   return parts.join('');
 }
 
@@ -1633,7 +1631,7 @@ function formatDefaultOutput(data) {
     compactReset = quota.reset_display || 'unknown';
   }
 
-  return `${providerName}: ${quota.percent}% | ${compactReset}`;
+  return `${providerName}: ${quota.percent}% used | ${compactReset} left`;
 }
 
 /**

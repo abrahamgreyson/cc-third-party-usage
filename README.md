@@ -114,7 +114,7 @@ Using as a Custom Command widget in [ccstatusline](https://github.com/sirmalloc/
 ```bash
 # Default output (optimized for statusLine)
 cc-third-party-usage
-# Output: Kimi: 45.2% | 2h30m
+# Output: Kimi: 45.2% used | 2h30m left
 
 # JSON output
 cc-third-party-usage --json
@@ -140,7 +140,7 @@ cc-third-party-usage --version
 ### Default (statusLine-optimized)
 
 ```
-Kimi: 45.2% | 2h30m
+Kimi: 45.2% used | 2h30m left
 ```
 
 ### JSON Output (`--json`)

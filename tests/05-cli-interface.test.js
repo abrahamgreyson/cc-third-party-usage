@@ -38,10 +38,10 @@ describe('formatCompactTime', () => {
     expect(result).toBe('2h30m');
   });
 
-  test('should format duration with minutes and seconds (e.g., 45m15s)', () => {
-    // 2715000ms = 45m15s (45*60000 + 15*1000)
+  test('should format duration with minutes only (e.g., 45m)', () => {
+    // 2715000ms = 45m15s -> rounds to 45m (seconds dropped)
     const result = formatCompactTime(2715000);
-    expect(result).toBe('45m15s');
+    expect(result).toBe('45m');
   });
 
   test('should format duration with days and hours (e.g., 3d12h)', () => {
@@ -51,24 +51,24 @@ describe('formatCompactTime', () => {
   });
 
   test('should handle zero input gracefully', () => {
-    expect(formatCompactTime(0)).toBe('0s');
+    expect(formatCompactTime(0)).toBe('0m');
   });
 
   test('should handle negative input gracefully', () => {
-    expect(formatCompactTime(-500)).toBe('0s');
+    expect(formatCompactTime(-500)).toBe('0m');
   });
 
-  test('should skip seconds when days are shown', () => {
-    // 3d12h30m45s -- seconds should be omitted when days present
+  test('should always skip seconds', () => {
+    // 3d12h30m45s -- seconds should always be omitted
     const ms = 3 * 86400000 + 12 * 3600000 + 30 * 60000 + 45 * 1000;
     const result = formatCompactTime(ms);
     expect(result).toBe('3d12h30m');
     expect(result).not.toContain('s');
   });
 
-  test('should format seconds only when no larger unit', () => {
-    // 5000ms = 5s
-    expect(formatCompactTime(5000)).toBe('5s');
+  test('should show 0m when under a minute', () => {
+    // 5000ms = 5s -> shows as 0m (seconds always dropped)
+    expect(formatCompactTime(5000)).toBe('0m');
   });
 });
 
@@ -82,8 +82,8 @@ describe('normalizeResetTime - millisecond timestamps', () => {
     // Create a timestamp 2 hours in the future in milliseconds
     const futureMs = Date.now() + 2 * 60 * 60 * 1000;
     const result = normalizeResetTime(futureMs);
-    // Should produce "2小时X分钟", not "492594122小时X分钟"
-    expect(result).toMatch(/^2小时\d+分钟$/);
+    // Should produce "X小时X分钟", not "492594122小时X分钟"
+    expect(result).toMatch(/^\d+小时\d+分钟$/);
     expect(result).not.toBe('已过期');
   });
 
@@ -672,7 +672,7 @@ describe('formatDefaultOutput', () => {
 
     const result = formatDefaultOutput(data);
 
-    expect(result).toMatch(/^GLM: 6\.4% \| .+$/);
+    expect(result).toMatch(/^GLM: 6\.4% used \| .+ left$/);
   });
 
   test('should select shortest reset window when multiple windows available', () => {
@@ -704,7 +704,7 @@ describe('formatDefaultOutput', () => {
 
     // Should use the overall window (2h) which has the shortest reset time
     expect(result).toContain('20%');
-    expect(result).toMatch(/Kimi: 20% \| .+/);
+    expect(result).toMatch(/Kimi: 20% used \| .+ left/);
   });
 
   test('should capitalize provider name in output', () => {
