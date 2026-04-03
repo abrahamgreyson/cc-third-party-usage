@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/cc-third-party-usage.svg)](https://www.npmjs.com/package/cc-third-party-usage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![demo](./docs/demo.png)
+![demo](./demo.png)
 
 ## ✨ Features
 
