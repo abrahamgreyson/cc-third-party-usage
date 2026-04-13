@@ -16,16 +16,12 @@ test:
   stage: test
   image: node:20-alpine
   cache:
-    key:
-      files:
-        - package-lock.json
     paths:
       - node_modules/
   before_script:
-    - apk add --no-cache curl
     - npm --version
   script:
-    - npm ci
+    - npm install
     - npm test
   only:
     - branches
@@ -35,9 +31,6 @@ publish:
   stage: publish
   image: node:20-alpine
   cache:
-    key:
-      files:
-        - package-lock.json
     paths:
       - node_modules/
   before_script:
