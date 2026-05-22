@@ -2,7 +2,7 @@
 
 ///// Metadata /////
 
-const VERSION = '1.1.4';
+const VERSION = '1.1.5';
 const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
 
 ///// CLI Argument Parser (zero-dependency) /////
@@ -581,11 +581,18 @@ async function getProxyCredentials() {
   }
 
   try {
-    const result = db.prepare('SELECT settings_config FROM providers WHERE id = ?').get('default');
+    // CC Switch DB schema: active provider identified by is_current = 1
+    // Try new schema first (is_current column), fall back to legacy (id = 'default')
+    let result;
+    try {
+      result = db.prepare("SELECT settings_config FROM providers WHERE app_type = 'claude' AND is_current = 1").get();
+    } catch {
+      result = db.prepare('SELECT settings_config FROM providers WHERE id = ?').get('default');
+    }
 
     if (!result || !result.settings_config) {
       throw new ConfigError(
-        'Local proxy database has no default provider configuration. ' +
+        'Local proxy database has no active provider configuration. ' +
         'Verify your proxy is properly configured.'
       );
     }
