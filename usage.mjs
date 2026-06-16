@@ -2,16 +2,16 @@
 
 ///// Metadata /////
 
-const VERSION = '1.1.5';
+const VERSION = '1.1.6';
 const DESCRIPTION = 'AI API Usage Monitor - Track Kimi and GLM API usage with automatic configuration detection';
 
 ///// CLI Argument Parser (zero-dependency) /////
 
 /**
  * Parse CLI arguments without external dependencies.
- * Supports: --json, --template <str>, --verbose, --cache-duration <n>, --version, --help
+ * Supports: --json, --template <str>, --verbose, --cache-duration <n>, --fetch-throttle <n>, --version, --help
  * @param {string[]} argv - process.argv (or similar)
- * @returns {{ json: boolean, template: string|null, verbose: boolean, cacheDuration: number, showVersion: boolean, showHelp: boolean }}
+ * @returns {{ json: boolean, template: string|null, verbose: boolean, cacheDuration: number, fetchThrottle: number, showVersion: boolean, showHelp: boolean }}
  */
 function parseArgs(argv) {
   const args = argv.slice(2); // skip node and script path
@@ -20,6 +20,7 @@ function parseArgs(argv) {
     template: null,
     verbose: false,
     cacheDuration: 60,
+    fetchThrottle: DEFAULT_CONFIG.fetchThrottle,
     showVersion: false,
     showHelp: false,
   };
@@ -41,6 +42,12 @@ function parseArgs(argv) {
       case '-c':
       case '--cache-duration':
         options.cacheDuration = parseInt(args[++i], 10) || 60;
+        break;
+      case '--fetch-throttle':
+        options.fetchThrottle = parseInt(args[++i], 10);
+        if (!Number.isFinite(options.fetchThrottle) || options.fetchThrottle < 0) {
+          options.fetchThrottle = DEFAULT_CONFIG.fetchThrottle;
+        }
         break;
       case '-v':
       case '--version':
@@ -66,6 +73,7 @@ Options:
   -t, --template <str>    custom output template
   --verbose               show debug information
   -c, --cache-duration <n>  cache TTL in seconds (default: 60)
+  --fetch-throttle <n>      min seconds between background fetches (default: 30)
   -v, --version           output the current version
   -h, --help              display help for command
 `);
@@ -83,6 +91,9 @@ const EXIT_CODES = {
 
 const DEFAULT_CONFIG = {
   cacheDuration: 60,
+  // Minimum seconds between background fetch spawns. Prevents spawn storms
+  // when statusLine refreshes frequently. Cold start (no cache) always fetches.
+  fetchThrottle: 30,
   timeout: 20000,
   maxRetries: 3,
   initialRetryDelay: 1000,
@@ -1317,6 +1328,48 @@ function readCacheRawSync(filePath) {
 }
 
 /**
+ * Returns the path to the fetch-throttle stamp file.
+ * A single global stamp (not per-provider): in proxy mode the main process
+ * does not know the resolved provider, so a per-provider stamp is unenforceable.
+ * @returns {string} Absolute path to the stamp file
+ */
+function getFetchStampPath() {
+  return join(getCacheDir(), 'cc-usage-fetch-stamp.json');
+}
+
+/**
+ * Decides whether a background fetch should be skipped due to recent activity.
+ * The stamp records when the last fetch was *spawned* (not completed), so a
+ * failed fetch still consumes its throttle window — preventing retry storms.
+ * Fail-open: any read/parse error means "do not throttle" (fetch now).
+ * @param {number} throttleMs - Minimum interval between spawns in milliseconds
+ * @returns {boolean} True if a fetch was spawned within the throttle window
+ */
+function shouldThrottleFetch(throttleMs) {
+  try {
+    const content = readFileSync(getFetchStampPath(), 'utf-8');
+    const { lastSpawnAt } = JSON.parse(content);
+    if (typeof lastSpawnAt !== 'number') return false;
+    return (Date.now() - lastSpawnAt) < throttleMs;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Record that a background fetch was just spawned.
+ * Written *before* spawning so concurrent invocations see it immediately.
+ * Fail-open: write errors are silently ignored.
+ */
+function markFetchSpawned() {
+  try {
+    writeFileSync(getFetchStampPath(), JSON.stringify({ lastSpawnAt: Date.now() }));
+  } catch {
+    // Fail-open
+  }
+}
+
+/**
  * Spawn a detached background child process to fetch fresh API data.
  * Parent can exit immediately; child survives via .unref().
  * @param {number} cacheDuration - Cache TTL in seconds
@@ -1761,8 +1814,17 @@ async function runCLI() {
     process.stdout.write(formatDefaultOutput(data) + '\n');
   }
 
-  // Spawn background fetch (fire and forget)
-  spawnBackgroundFetch(options.cacheDuration);
+  // Spawn background fetch (fire and forget), throttled to avoid spawn storms.
+  // Cold start (no usable cache) always fetches regardless of throttle.
+  const throttleMs = options.fetchThrottle * 1000;
+  const noCache = !data || (data.quotas && data.quotas.length === 0);
+  const throttled = !noCache && shouldThrottleFetch(throttleMs);
+  if (!throttled) {
+    markFetchSpawned();
+    spawnBackgroundFetch(options.cacheDuration);
+  } else if (options.verbose) {
+    verboseLog(`Fetch: throttled (min ${options.fetchThrottle}s between fetches)`);
+  }
   process.exit(0);
 }
 
@@ -1828,6 +1890,9 @@ export {
   getCachedUsageData,
   detectProviderFromEnv,
   refreshCache,
+  getFetchStampPath,
+  shouldThrottleFetch,
+  markFetchSpawned,
   buildPlaceholderValues,
   applyTemplate,
   formatDefaultOutput,
